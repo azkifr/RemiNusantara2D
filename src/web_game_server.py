@@ -275,7 +275,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     justify-content: center;
     gap: 12px;
     padding: 4px 0;
-    min-height: 140px;
+    min-height: 155px;
   }
 
   /* PLAYER AREA (Anda / Player 1) */
@@ -392,8 +392,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* PAK KARTU (Draw Deck 3D) */
   #pak-box {
-    width: clamp(86px, 6.8vw, 98px);
-    height: clamp(124px, 9.6vw, 138px);
+    width: clamp(88px, 7vw, 100px);
+    height: clamp(150px, 11.6vw, 166px);
     background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
     border: 2px solid #fbbf24;
     border-radius: 12px;
@@ -426,19 +426,19 @@ HTML_PAGE = r"""<!DOCTYPE html>
     background: radial-gradient(ellipse at center, rgba(88, 28, 135, 0.75) 0%, rgba(38, 10, 60, 0.9) 100%);
     border: 1.5px solid #c084fc;
     border-radius: 12px;
-    padding: 4px;
+    padding: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: clamp(86px, 6.8vw, 98px);
-    height: clamp(124px, 9.6vw, 138px);
+    width: clamp(88px, 7vw, 100px);
+    height: clamp(150px, 11.6vw, 166px);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(192, 132, 252, 0.3);
     flex-shrink: 0;
   }
   #wild-card-slot .card {
     width: clamp(74px, 5.8vw, 84px);
-    height: clamp(108px, 8.4vw, 122px);
+    height: clamp(110px, 8.6vw, 124px);
     cursor: default;
   }
   #wild-card-slot .card:hover { transform: none; }
@@ -447,58 +447,85 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* PROMINENT DISCARD RAIL (KARTU YANG DIBUANG)              */
   /* ======================================================== */
   #discard-rail {
-    background: rgba(3, 24, 14, 0.85);
-    border: 2px solid rgba(250, 204, 21, 0.4);
+    background: rgba(3, 24, 14, 0.88);
+    border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 6px 10px;
+    padding: 6px 12px 10px 12px;
     flex: 1;
     min-width: 0;
-    height: clamp(124px, 9.6vw, 138px);
+    min-height: 150px;
+    height: clamp(150px, 11.6vw, 166px);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    justify-content: center;
+    justify-content: flex-start;
     box-shadow: inset 0 2px 12px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.3);
+  }
+  #disc-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #fde047;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
   }
   #disc-cards {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
-    overflow-y: hidden;
+    overflow-y: visible !important;
     gap: 8px;
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    height: 100%;
-    padding: 4px 2px;
+    flex: 1;
+    padding: 4px 4px 10px 4px;
   }
-  #disc-cards::-webkit-scrollbar { height: 5px; }
-  #disc-cards::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.45); border-radius: 4px; }
+  #disc-cards::-webkit-scrollbar { height: 6px; }
+  #disc-cards::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.5); border-radius: 4px; }
 
-  /* LARGE DISCARD CARDS */
+  /* LARGE DISCARD CARDS (NEVER CUT OFF!) */
   #disc-cards .card {
-    width: var(--disc-card-w);
-    height: var(--disc-card-h);
+    width: clamp(74px, 5.8vw, 84px);
+    height: clamp(110px, 8.6vw, 124px);
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+  }
+  #disc-cards .card::after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: -4px;
+    right: -4px;
+    bottom: -15px;
+    pointer-events: auto;
+    z-index: -1;
   }
   #disc-cards .card:hover {
-    transform: translateY(-8px) scale(1.05);
+    transform: translateY(-6px);
     z-index: 20;
-    box-shadow: 0 12px 24px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
   }
   #disc-cards .c-rank { font-size: 16px; }
   #disc-cards .c-suit-mini { font-size: 13px; }
   #disc-cards .c-center { font-size: 34px; }
   #disc-cards .c-badge-pill {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 8.5px;
-    padding: 2px 6px;
+    padding: 2px 7px;
     background: #facc15;
     color: #0f172a;
     font-weight: 900;
     border: 1px solid #eab308;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    border-radius: 999px;
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   /* ======================================================== */
@@ -641,38 +668,64 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
 
   /* ======================================================== */
-  /* PLAYER HAND: 50% OVERLAPPING FAN (MENUMPUK SETENGAH KARTU)*/
+  /* PLAYER HAND: 50% OVERLAPPING FAN WITH STATIC HITBOX SLOTS */
+  /* Eliminates 100% of hover vibration by isolating translate */
   /* ======================================================== */
   #my-hand {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding: 22px 14px 4px 14px;
+    padding: 30px 14px 4px 14px;
     width: 100%;
-    min-height: 156px;
+    min-height: 165px;
+    position: relative;
   }
-  #my-hand .card {
+  #my-hand .hand-card-slot {
     width: var(--hand-card-w);
     height: var(--hand-card-h);
-    margin-left: calc(var(--hand-card-w) * -0.52); /* Menumpuk 50%! */
-    box-shadow: -4px 0 12px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3);
-    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease, z-index 0.18s ease;
+    margin-left: calc(var(--hand-card-w) * -0.52); /* 50% menumpuk! */
     position: relative;
     flex-shrink: 0;
+    pointer-events: auto;
   }
-  #my-hand .card:first-child {
+  #my-hand .hand-card-slot:first-child {
     margin-left: 0 !important;
   }
-  #my-hand .card:hover {
-    transform: translateY(-26px) scale(1.08);
-    z-index: 80;
-    box-shadow: -4px 16px 28px rgba(0,0,0,0.7), 0 0 16px rgba(250, 204, 21, 0.45);
+  /* Static invisible hover envelope: slot never moves, so hover never jitters */
+  #my-hand .hand-card-slot::before {
+    content: "";
+    position: absolute;
+    top: -30px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: auto;
   }
-  #my-hand .card.selected {
-    transform: translateY(-38px) scale(1.1) !important;
-    z-index: 100 !important;
+  #my-hand .hand-card-slot:hover {
+    z-index: 70;
+  }
+  #my-hand .hand-card-slot .card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+    cursor: pointer;
+  }
+  #my-hand .hand-card-slot:hover .card {
+    transform: translateY(-24px);
+    box-shadow: -4px 14px 26px rgba(0,0,0,0.65), 0 0 18px rgba(250, 204, 21, 0.45);
+  }
+  #my-hand .hand-card-slot .card.selected {
+    transform: translateY(-36px) !important;
     border-color: #f59e0b !important;
-    box-shadow: 0 0 0 3.5px #f59e0b, 0 20px 35px rgba(245, 158, 11, 0.6) !important;
+    box-shadow: 0 0 0 3px #f59e0b, 0 18px 32px rgba(245, 158, 11, 0.6) !important;
+  }
+  #my-hand .hand-card-slot.selected-slot,
+  #my-hand .hand-card-slot:has(.card.selected) {
+    z-index: 90 !important;
   }
 
   /* ======================================================== */
@@ -950,9 +1003,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   <!-- OPPONENT: TOP (Bot Siti) -->
   <div id="zone-top" class="zone-box">
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 4px;">
-      <div class="player-title" id="top-title">Bot Siti</div>
-      <div class="cards-row opp-cards" id="top-cards"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:3px;">
+      <div class="player-title" id="top-title" style="text-align:center;">Bot Siti</div>
+      <div class="cards-row opp-cards" id="top-cards" style="justify-content:center;"></div>
     </div>
     <div id="top-melds-label" style="font-size:10px;color:#fde047;font-weight:700;margin-top:2px;">Kartu Jadi:</div>
     <div class="meld-container" id="top-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
@@ -1204,7 +1257,7 @@ function renderCardHTML(c, opts = {}) {
     </div>
     ${isWild && c.rank !== 'JOKER' ? '<div class="c-wild-ribbon">WILD</div>' : ''}
     <div class="c-center">${c.rank === 'JOKER' ? '★' : suitIcon}</div>
-    ${!isWild && pointText ? `<div class="c-point-pill">${pointText}</div>` : ''}
+    ${!isWild && pointText && !isActionBadge ? `<div class="c-point-pill">${pointText}</div>` : ''}
     ${isActionBadge ? `<div class="c-badge-pill">${opts.badge}</div>` : ''}
     <div class="c-corner c-corner-br">
       <span class="c-rank">${topRank}</span>
@@ -1399,6 +1452,18 @@ function updateUI(st) {
           hint: isTakeable ? `Ambil kartu buangan #${revIdx + 1} & langsung otomatis turun!` : 'Kartu buangan terkunci'
         });
       }).join('');
+
+      // Auto-scroll discard rail so newest card (AMBIL #1) is always visible
+      if (!discContainer._wheelBound) {
+        discContainer._wheelBound = true;
+        discContainer.addEventListener('wheel', (e) => {
+          if (e.deltaY !== 0) {
+            e.preventDefault();
+            discContainer.scrollLeft += e.deltaY;
+          }
+        }, { passive: false });
+      }
+      setTimeout(() => { discContainer.scrollLeft = discContainer.scrollWidth; }, 20);
     }
   }
 
@@ -1448,13 +1513,13 @@ function updateUI(st) {
     const myMeldsEl = document.getElementById('my-melds');
     if (myMeldsEl) myMeldsEl.innerHTML = renderMeldsHTML(p0.melds, false);
 
-    // Render 50% Overlapping Hand
+    // Render 50% Overlapping Hand with Static Slot Hitboxes (Anti-Jitter)
     const myHandEl = document.getElementById('my-hand');
     if (myHandEl) {
       myHandEl.innerHTML = (p0.hand || []).map(c => {
         const isSel = selectedCards.has(c.id);
         const canClick = isMyTurn && (st.phase === 'TURN_MELD_DISCARD');
-        return renderCardHTML(c, {
+        const cardHtml = renderCardHTML(c, {
           selected: isSel,
           onclick: `toggleCard('${c.id}')`,
           onrightclick: `quickDiscard('${c.id}')`,
@@ -1462,6 +1527,7 @@ function updateUI(st) {
           ondragstart: `onHandCardDragStart(event, '${c.id}')`,
           hint: 'Klik untuk pilih; Geser / Klik Kanan untuk Buang (B)'
         });
+        return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''}">${cardHtml}</div>`;
       }).join('');
     }
   }
