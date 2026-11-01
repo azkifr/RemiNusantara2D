@@ -1260,10 +1260,16 @@ function updateUI(st) {
   }
 
   const notifEl = document.getElementById('hdr-status');
-  if (notifEl && st.last_event) notifEl.textContent = st.last_event;
+  if (notifEl && (st.last_event || st.status_message)) notifEl.textContent = st.last_event || st.status_message;
+
+  const deckCount = (st.deck_count !== undefined) ? st.deck_count : (st.draw_pile_count || 0);
+  const discards = st.discards || st.discard_pile || [];
+  const wildCard = st.wildcard_card || st.wildcard_indicator || null;
+  const statusMsg = st.last_event || st.status_message || '';
+  const leaderSeat = (st.leader_seat !== undefined) ? st.leader_seat : (st.highest_score_seat || 0);
 
   // Render Pak Box
-  document.getElementById('pak-count').textContent = `(${st.deck_count})`;
+  document.getElementById('pak-count').textContent = `(${deckCount})`;
   const pakBox = document.getElementById('pak-box');
   if (pakBox) {
     if (isMyTurn && st.phase === 'TURN_DRAW') pakBox.classList.add('glow');
@@ -1272,18 +1278,18 @@ function updateUI(st) {
 
   // Render Wild Card Slot
   const wildSlot = document.getElementById('wild-card-slot');
-  if (wildSlot && st.wildcard_card) {
-    wildSlot.innerHTML = renderCardHTML(st.wildcard_card);
+  if (wildSlot && wildCard) {
+    wildSlot.innerHTML = renderCardHTML(wildCard);
   }
 
   // Render Discard Rail (Single horizontal row!)
   const discContainer = document.getElementById('disc-cards');
   if (discContainer) {
-    if (!st.discards || !st.discards.length) {
+    if (!discards || !discards.length) {
       discContainer.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;padding:4px;">(Tumpukan buangan masih kosong)</div>';
     } else {
-      const totalDisc = st.discards.length;
-      discContainer.innerHTML = st.discards.map((c, i) => {
+      const totalDisc = discards.length;
+      discContainer.innerHTML = discards.map((c, i) => {
         const revIdx = totalDisc - 1 - i;
         const isTakeable = (revIdx < 7);
         const badgeText = isTakeable ? `AMBIL #${revIdx + 1}` : `#${revIdx + 1}`;
@@ -1302,20 +1308,20 @@ function updateUI(st) {
   // Render Opponents
   const n = st.players.length;
   if (n === 2) {
-    renderOpponentZone('zone-top', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, st.leader_seat);
+    renderOpponentZone('zone-top', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
     document.getElementById('zone-left').style.display = 'none';
     document.getElementById('zone-right').style.display = 'none';
   } else if (n === 3) {
-    renderOpponentZone('zone-left', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, st.leader_seat);
-    renderOpponentZone('zone-top', st.players[(mySeat + 2) % n], st.current_turn_seat === (mySeat + 2) % n, st.show_bot_hands, st.target_score, st.leader_seat);
+    renderOpponentZone('zone-left', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('zone-top', st.players[(mySeat + 2) % n], st.current_turn_seat === (mySeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
     document.getElementById('zone-left').style.display = 'flex';
     document.getElementById('zone-right').style.display = 'none';
   } else {
     document.getElementById('zone-left').style.display = 'flex';
     document.getElementById('zone-right').style.display = 'flex';
-    renderOpponentZone('zone-left', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, st.leader_seat);
-    renderOpponentZone('zone-top', st.players[(mySeat + 2) % n], st.current_turn_seat === (mySeat + 2) % n, st.show_bot_hands, st.target_score, st.leader_seat);
-    renderOpponentZone('zone-right', st.players[(mySeat + 3) % n], st.current_turn_seat === (mySeat + 3) % n, st.show_bot_hands, st.target_score, st.leader_seat);
+    renderOpponentZone('zone-left', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('zone-top', st.players[(mySeat + 2) % n], st.current_turn_seat === (mySeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('zone-right', st.players[(mySeat + 3) % n], st.current_turn_seat === (mySeat + 3) % n, st.show_bot_hands, st.target_score, leaderSeat);
   }
 
   // Render Player Zone
@@ -1413,11 +1419,12 @@ function declareTutupTangan() {
 }
 
 function takeDiscard(idx) {
-  sendAction('DRAW_DISCARD', { index: idx });
+  sendAction('TAKE_DISCARD', { index: idx, discard_index: idx });
 }
 
 async function sendAction(action, data = {}) {
   try {
+    data.action = action;
     data.seat = mySeat;
     const res = await fetch(`/api/action?act=${action}`, {
       method: 'POST',
@@ -1636,6 +1643,18 @@ setInterval(async () => {
 </html>"""
 
 
+def _format_state_dict(seat: int) -> dict:
+    st = GAME.to_state_dict(viewer_seat=seat)
+    st["host_ip"] = get_local_ip()
+    st["server_port"] = 8080
+    st["deck_count"] = st.get("draw_pile_count", 0)
+    st["discards"] = st.get("discard_pile", [])
+    st["wildcard_card"] = st.get("wildcard_indicator", None)
+    st["last_event"] = st.get("status_message", "")
+    st["leader_seat"] = st.get("highest_score_seat", 0)
+    return st
+
+
 class RemiWebHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
@@ -1646,9 +1665,7 @@ class RemiWebHandler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             seat = int(qs.get("seat", ["0"])[0])
             with GAME_LOCK:
-                st = GAME.to_state_dict(viewer_seat=seat)
-                st["host_ip"] = get_local_ip()
-                st["server_port"] = 8080
+                st = _format_state_dict(seat)
             self._send_json({"state": st})
             return
         if parsed.path == "/api/config":
@@ -1763,9 +1780,7 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     payload.get("target_card_id", ""),
                 )
 
-            st = GAME.to_state_dict(viewer_seat=seat)
-            st["host_ip"] = get_local_ip()
-            st["server_port"] = 8080
+            st = _format_state_dict(seat)
 
         self._send_json({"state": st})
 
@@ -1781,15 +1796,26 @@ class RemiWebHandler(BaseHTTPRequestHandler):
             pass
 
 
-def run_web_server(port: int = 8080, open_browser: bool = False):
-    threading.Thread(target=_bot_background_worker, daemon=True).start()
-    server = ThreadingHTTPServer(("0.0.0.0", port), RemiWebHandler)
+def run_web_server(port: int = 8080, open_browser: bool = True):
     url = f"http://localhost:{port}"
+    try:
+        server = ThreadingHTTPServer(("0.0.0.0", port), RemiWebHandler)
+    except OSError as e:
+        err_msg = str(e).lower()
+        if getattr(e, "winerror", None) == 10048 or getattr(e, "errno", None) == 98 or "already in use" in err_msg:
+            print(f"[INFO] Server Remi Nusantara 2D sudah aktif di: {url}")
+            print(f"[INFO] Membuka browser ke {url} ...")
+            if open_browser:
+                webbrowser.open(url)
+            return
+        raise e
+
+    threading.Thread(target=_bot_background_worker, daemon=True).start()
     print(f"[REMI NUSANTARA 2D ONLINE] Server aktif di: {url}")
     if open_browser:
-        threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     server.serve_forever()
 
 
 if __name__ == "__main__":
-    run_web_server(port=8080, open_browser=False)
+    run_web_server(port=8080, open_browser=True)
