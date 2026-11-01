@@ -83,13 +83,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
     --wood-rail: #231309;
     --gold: #facc15;
     --gold-glow: rgba(250, 204, 21, 0.45);
-    /* Large card dimensions */
-    --hand-card-w: clamp(96px, 7.5vw, 108px);
-    --hand-card-h: clamp(140px, 11vw, 158px);
-    --disc-card-w: clamp(78px, 6vw, 86px);
-    --disc-card-h: clamp(114px, 8.8vw, 126px);
-    --meld-card-w: clamp(48px, 3.8vw, 54px);
-    --meld-card-h: clamp(68px, 5.4vw, 76px);
+    /* Large, High-Legibility Card Dimensions */
+    --hand-card-w: clamp(100px, 7.8vw, 114px);
+    --hand-card-h: clamp(146px, 11.4vw, 166px);
+    --disc-card-w: clamp(74px, 5.8vw, 84px);
+    --disc-card-h: clamp(108px, 8.4vw, 122px);
+    --meld-card-w: clamp(52px, 4vw, 60px);
+    --meld-card-h: clamp(74px, 5.8vw, 84px);
   }
 
   * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
@@ -475,6 +475,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
     cursor: default;
   }
   #wild-card-slot .card:hover { transform: none; }
+  #wild-card-slot .card .c-rank { font-size: 22px !important; }
+  #wild-card-slot .card .c-suit-mini { font-size: 19px !important; }
+  #wild-card-slot .card .c-center { font-size: 56px !important; }
 
   /* ======================================================== */
   /* PROMINENT DISCARD RAIL (KARTU YANG DIBUANG - MAX 7 TERATAS) */
@@ -521,8 +524,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* DISCARD CARDS (MAX 7 TERATAS - AMBIL & AUTO JADI) */
   #disc-cards .card {
-    width: clamp(68px, 5.2vw, 80px);
-    height: clamp(104px, 8vw, 118px);
+    width: clamp(72px, 5.6vw, 84px);
+    height: clamp(108px, 8.4vw, 122px);
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
@@ -536,16 +539,17 @@ HTML_PAGE = r"""<!DOCTYPE html>
     z-index: 20;
     box-shadow: 0 10px 22px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
   }
-  #disc-cards .c-rank { font-size: 15px; }
-  #disc-cards .c-suit-mini { font-size: 12px; }
-  #disc-cards .c-center { font-size: 32px; }
+  /* ENLARGED LOGO & RANK IN DISCARD RAIL */
+  #disc-cards .c-rank { font-size: 21px !important; }
+  #disc-cards .c-suit-mini { font-size: 18px !important; }
+  #disc-cards .c-center { font-size: 52px !important; }
   #disc-cards .c-badge-pill {
     position: absolute;
     bottom: 4px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 8.5px;
-    padding: 2px 7px;
+    font-size: 9px;
+    padding: 2.5px 8px;
     background: #facc15;
     color: #0f172a;
     font-weight: 900;
@@ -576,8 +580,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     cursor: not-allowed;
     filter: grayscale(0.2);
   }
-  .card.red { color: #dc2626; }
-  .card.black { color: #0f172a; }
+  .card.red {
+    color: #e11d48; /* Deep Ruby / Crimson Red for max pop & vibrancy */
+  }
+  .card.black {
+    color: #09090b; /* True Rich Obsidian Black */
+  }
   .card.joker {
     background: linear-gradient(168deg, #faf5ff 0%, #f3e8ff 100%);
     border-color: #c084fc;
@@ -588,47 +596,54 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .c-corner-tl {
     position: absolute;
     top: 5px;
-    left: 6px;
+    left: 7px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    line-height: 1;
+    line-height: 0.92;
     pointer-events: none;
   }
   .c-corner-br {
     position: absolute;
     bottom: 5px;
-    right: 6px;
+    right: 7px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    line-height: 1;
+    line-height: 0.92;
     transform: rotate(180deg);
     pointer-events: none;
   }
+  /* BOLD HIGH-CONTRAST CARD LOGO & RANK */
   .c-rank {
     font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     font-weight: 900;
-    font-size: 18px;
-    line-height: 1;
-    letter-spacing: -0.5px;
+    font-size: 26px; /* was 18px: +44% much larger & clearer! */
+    line-height: 0.92;
+    letter-spacing: -0.8px;
   }
   .c-suit-mini {
-    font-size: 14px;
-    line-height: 1;
-    margin-top: 1.5px;
+    font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Outfit', sans-serif;
+    font-size: 22px; /* was 14px: +57% clearly visible in hand! */
+    font-weight: 900;
+    line-height: 0.92;
+    margin-top: 2px;
+    -webkit-text-stroke: 0.5px currentColor;
   }
 
-  /* CENTER SUIT ICON */
+  /* PROMINENT CENTER SUIT LOGO (HERO OF THE CARD) */
   .c-center {
     position: absolute;
     top: 50%;
-    left: 48%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 40px;
+    font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Outfit', sans-serif;
+    font-size: 68px; /* was 40px: +70% giant bold logo! */
+    font-weight: 900;
     line-height: 1;
     pointer-events: none;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    -webkit-text-stroke: 0.6px currentColor;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.15));
   }
 
   /* TOP-RIGHT WILD RIBBON */
@@ -767,14 +782,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .card.small .c-mini-top {
     position: absolute;
     top: 3px;
-    left: 4px;
-    right: 4px;
+    left: 5px;
+    right: 5px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-family: 'Outfit', sans-serif;
     font-weight: 900;
-    font-size: 13px;
+    font-size: 16px; /* was 13px */
     line-height: 1;
   }
   .card.small .c-mini-center {
@@ -782,15 +797,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 22px;
+    font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Outfit', sans-serif;
+    font-size: 34px; /* was 22px: +54% bigger meld logo! */
+    font-weight: 900;
     line-height: 1;
+    -webkit-text-stroke: 0.4px currentColor;
   }
   .card.small .c-mini-bot {
     position: absolute;
     bottom: 2px;
     left: 3px;
     right: 3px;
-    font-size: 8px;
+    font-size: 8.5px;
     font-weight: 800;
     text-align: center;
     background: rgba(0,0,0,0.08);
