@@ -287,11 +287,44 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     gap: 4px;
     padding: 6px 12px 4px 12px;
-    background: rgba(4, 26, 16, 0.85);
+    background: rgba(4, 26, 16, 0.88);
     border: 1.5px solid rgba(250, 204, 21, 0.4);
     border-radius: 14px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.45);
     position: relative;
+    transition: all 0.25s ease;
+  }
+  /* PROMINENT PLAYER TURN HIGHLIGHT: BORDER GOLD PULSE */
+  #zone-bottom.my-turn-active {
+    border-color: #facc15 !important;
+    background: radial-gradient(ellipse at 50% 10%, rgba(21, 128, 61, 0.35) 0%, rgba(4, 26, 16, 0.95) 100%) !important;
+    box-shadow: 0 0 28px rgba(250, 204, 21, 0.65), 0 4px 24px rgba(0,0,0,0.6), inset 0 0 16px rgba(250, 204, 21, 0.25) !important;
+    animation: my-turn-pulse 1.6s infinite alternate ease-in-out;
+  }
+  @keyframes my-turn-pulse {
+    0% { border-color: #eab308; box-shadow: 0 0 18px rgba(250, 204, 21, 0.45), inset 0 0 10px rgba(250, 204, 21, 0.15); }
+    100% { border-color: #fef08a; box-shadow: 0 0 34px rgba(250, 204, 21, 0.85), inset 0 0 22px rgba(250, 204, 21, 0.35); }
+  }
+
+  /* OPPONENT ACTIVE TURN HIGHLIGHT */
+  .opponent-turn-active {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.7), inset 0 0 14px rgba(56, 189, 248, 0.25) !important;
+    animation: opp-turn-pulse 1.4s infinite alternate ease-in-out;
+  }
+  @keyframes opp-turn-pulse {
+    0% { border-color: #0284c7; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4); }
+    100% { border-color: #7dd3fc; box-shadow: 0 0 28px rgba(56, 189, 248, 0.85); }
+  }
+
+  /* DRAG & DROP TARGET VISUAL FEEDBACK */
+  .drop-target-active {
+    border-color: #4ade80 !important;
+    box-shadow: 0 0 32px rgba(74, 222, 128, 0.85), inset 0 0 18px rgba(74, 222, 128, 0.35) !important;
+  }
+  .drop-target-discard {
+    border-color: #f87171 !important;
+    box-shadow: 0 0 32px rgba(248, 113, 113, 0.85), inset 0 0 18px rgba(248, 113, 113, 0.35) !important;
   }
 
   .player-title {
@@ -444,22 +477,24 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #wild-card-slot .card:hover { transform: none; }
 
   /* ======================================================== */
-  /* PROMINENT DISCARD RAIL (KARTU YANG DIBUANG)              */
+  /* PROMINENT DISCARD RAIL (KARTU YANG DIBUANG - MAX 7 TERATAS) */
   /* ======================================================== */
   #discard-rail {
     background: rgba(3, 24, 14, 0.88);
     border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 6px 12px 10px 12px;
+    padding: 6px 12px 8px 12px;
     flex: 1;
     min-width: 0;
-    min-height: 150px;
-    height: clamp(150px, 11.6vw, 166px);
+    min-height: 154px;
+    height: clamp(154px, 11.8vw, 172px);
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     justify-content: flex-start;
     box-shadow: inset 0 2px 12px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+    position: relative;
   }
   #disc-title {
     font-size: 11px;
@@ -468,52 +503,45 @@ HTML_PAGE = r"""<!DOCTYPE html>
     margin-bottom: 4px;
     letter-spacing: 0.3px;
     flex-shrink: 0;
+    width: 100%;
+    text-align: left;
   }
   #disc-cards {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
+    overflow: hidden !important; /* Maksimal 7 kartu, tidak pernah melebar atau meluber */
     gap: 8px;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center; /* Kartu berada di tengah rapi */
     width: 100%;
     flex: 1;
-    padding: 4px 4px 10px 4px;
+    padding: 2px 4px 6px 4px;
   }
-  #disc-cards::-webkit-scrollbar { height: 6px; }
-  #disc-cards::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.5); border-radius: 4px; }
 
-  /* LARGE DISCARD CARDS (NEVER CUT OFF!) */
+  /* DISCARD CARDS (MAX 7 TERATAS - AMBIL & AUTO JADI) */
   #disc-cards .card {
-    width: clamp(74px, 5.8vw, 84px);
-    height: clamp(110px, 8.6vw, 124px);
+    width: clamp(68px, 5.2vw, 80px);
+    height: clamp(104px, 8vw, 118px);
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
+    cursor: grab;
   }
-  #disc-cards .card::after {
-    content: "";
-    position: absolute;
-    top: -8px;
-    left: -4px;
-    right: -4px;
-    bottom: -15px;
-    pointer-events: auto;
-    z-index: -1;
+  #disc-cards .card:active {
+    cursor: grabbing;
   }
   #disc-cards .card:hover {
     transform: translateY(-6px);
     z-index: 20;
     box-shadow: 0 10px 22px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
   }
-  #disc-cards .c-rank { font-size: 16px; }
-  #disc-cards .c-suit-mini { font-size: 13px; }
-  #disc-cards .c-center { font-size: 34px; }
+  #disc-cards .c-rank { font-size: 15px; }
+  #disc-cards .c-suit-mini { font-size: 12px; }
+  #disc-cards .c-center { font-size: 32px; }
   #disc-cards .c-badge-pill {
     position: absolute;
-    bottom: 5px;
+    bottom: 4px;
     left: 50%;
     transform: translateX(-50%);
     font-size: 8.5px;
@@ -526,6 +554,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border-radius: 999px;
     white-space: nowrap;
     pointer-events: none;
+    z-index: 5;
   }
 
   /* ======================================================== */
@@ -668,8 +697,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
 
   /* ======================================================== */
-  /* PLAYER HAND: 50% OVERLAPPING FAN WITH STATIC HITBOX SLOTS */
-  /* Eliminates 100% of hover vibration by isolating translate */
+  /* PLAYER HAND: 50% OVERLAPPING FAN WITH DRAGGABLE STATIC SLOTS */
+  /* Eliminates 100% of hover vibration & supports HTML5 drag-n-drop */
   /* ======================================================== */
   #my-hand {
     display: flex;
@@ -683,23 +712,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #my-hand .hand-card-slot {
     width: var(--hand-card-w);
     height: var(--hand-card-h);
-    margin-left: calc(var(--hand-card-w) * -0.52); /* 50% menumpuk! */
+    margin-left: calc(var(--hand-card-w) * -0.52); /* 50% menumpuk */
     position: relative;
     flex-shrink: 0;
-    pointer-events: auto;
+    cursor: grab;
+    user-select: none;
+    transition: z-index 0.15s ease;
+  }
+  #my-hand .hand-card-slot:active {
+    cursor: grabbing;
   }
   #my-hand .hand-card-slot:first-child {
     margin-left: 0 !important;
-  }
-  /* Static invisible hover envelope: slot never moves, so hover never jitters */
-  #my-hand .hand-card-slot::before {
-    content: "";
-    position: absolute;
-    top: -30px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: auto;
   }
   #my-hand .hand-card-slot:hover {
     z-index: 70;
@@ -710,21 +734,22 @@ HTML_PAGE = r"""<!DOCTYPE html>
     left: 0;
     width: 100%;
     height: 100%;
+    margin-left: 0 !important;
     box-shadow: -4px 0 12px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3);
     transition: transform 0.16s ease, box-shadow 0.16s ease;
-    cursor: pointer;
+    pointer-events: none; /* Event mouse & drag ditangani 100% oleh slot statis */
   }
   #my-hand .hand-card-slot:hover .card {
     transform: translateY(-24px);
     box-shadow: -4px 14px 26px rgba(0,0,0,0.65), 0 0 18px rgba(250, 204, 21, 0.45);
   }
+  #my-hand .hand-card-slot.selected-slot .card,
   #my-hand .hand-card-slot .card.selected {
     transform: translateY(-36px) !important;
     border-color: #f59e0b !important;
     box-shadow: 0 0 0 3px #f59e0b, 0 18px 32px rgba(245, 158, 11, 0.6) !important;
   }
-  #my-hand .hand-card-slot.selected-slot,
-  #my-hand .hand-card-slot:has(.card.selected) {
+  #my-hand .hand-card-slot.selected-slot {
     z-index: 90 !important;
   }
 
@@ -1053,13 +1078,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   <!-- PLAYER ZONE (Anda / Player 1) -->
   <div id="zone-bottom" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 4px;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span id="my-turn-badge" class="turn-badge" style="display:none;">GILIRAN ANDA!</span>
-        <span id="my-info" class="player-title" style="font-size:12px;color:#facc15;">Anda (Player 1)</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:11px;padding:3px 10px;">★ GILIRAN ANDA! ★</span>
+        <span id="my-info" class="player-title" style="font-size:13px;color:#facc15;">Anda (Player 1)</span>
       </div>
-      <div id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
-        BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="my-step-badge" style="display:none;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;"></span>
+        <span id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
+          BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
+        </span>
       </div>
     </div>
 
@@ -1199,6 +1227,8 @@ let selectedCards = new Set();
 let latestState = null;
 let currentDrag = null;
 let initialClaimDone = false;
+let lastHandSig = '';
+let lastDiscSig = '';
 
 const SUIT_ICON = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
 
@@ -1282,9 +1312,9 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
   const meldsEl = document.getElementById(`${prefix}-melds`);
 
   if (!zoneEl || !p) return;
-  zoneEl.className = 'zone-box' + (isTurn ? ' zone-active' : '');
+  zoneEl.className = 'zone-box' + (isTurn ? ' zone-active opponent-turn-active' : '');
 
-  const badgeHTML = isTurn ? `<span class="turn-badge">⏳ SEDANG JALAN...</span> ` : '';
+  const badgeHTML = isTurn ? `<span class="turn-badge" style="background:#38bdf8;color:#082f49;box-shadow:0 0 10px #38bdf8;">⏳ SEDANG JALAN...</span> ` : '';
   const isLeader = (leaderSeat !== null && leaderSeat !== undefined && p.seat === leaderSeat && (latestState && (latestState.round_number > 1 || p.total_score > 0)));
   const leaderTag = isLeader ? ' <span style="color:#facc15;font-size:0.85em;">[👑 SKOR TERTINGGI]</span>' : '';
   const burnTag = p.burned_last_round ? ' <span style="color:#f87171;">[TERBAKAR!]</span>' : '';
@@ -1432,38 +1462,48 @@ function updateUI(st) {
     wildSlot.innerHTML = renderCardHTML(wildCard);
   }
 
-  // Render Discard Rail (Single horizontal row!)
+  // Render Discard Rail (Maksimal 7 Kartu Teratas & Otomatis Jadi!)
   const discContainer = document.getElementById('disc-cards');
+  const discTitleEl = document.getElementById('disc-title');
   if (discContainer) {
     if (!discards || !discards.length) {
+      if (discTitleEl) discTitleEl.textContent = 'TUMPUKAN BUANGAN (Maksimal 7 Teratas & Otomatis Jadi):';
       discContainer.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;padding:4px;">(Tumpukan buangan masih kosong)</div>';
+      lastDiscSig = '';
     } else {
       const totalDisc = discards.length;
-      discContainer.innerHTML = discards.map((c, i) => {
-        const revIdx = totalDisc - 1 - i;
-        const isTakeable = (revIdx < 7);
-        const badgeText = isTakeable ? `AMBIL #${revIdx + 1}` : `#${revIdx + 1}`;
-        const canClick = isMyTurn && st.phase === 'TURN_DRAW' && isTakeable;
-        return renderCardHTML(c, {
-          badge: badgeText,
-          onclick: canClick ? `takeDiscard(${i})` : '',
-          draggable: canClick,
-          ondragstart: canClick ? `onDiscardDragStart(event, ${i})` : '',
-          hint: isTakeable ? `Ambil kartu buangan #${revIdx + 1} & langsung otomatis turun!` : 'Kartu buangan terkunci'
-        });
-      }).join('');
+      const MAX_DISC = 7;
+      const startIdx = Math.max(0, totalDisc - MAX_DISC);
+      const top7Discards = discards.slice(startIdx);
+      const buriedCount = startIdx;
 
-      // Auto-scroll discard rail so newest card (AMBIL #1) is always visible
-      if (!discContainer._wheelBound) {
-        discContainer._wheelBound = true;
-        discContainer.addEventListener('wheel', (e) => {
-          if (e.deltaY !== 0) {
-            e.preventDefault();
-            discContainer.scrollLeft += e.deltaY;
-          }
-        }, { passive: false });
+      if (discTitleEl) {
+        if (buriedCount > 0) {
+          discTitleEl.innerHTML = `TUMPUKAN BUANGAN (Menampilkan 7 Teratas & Otomatis Jadi — <span style="color:#cbd5e1;font-weight:600;">${buriedCount} Kartu Terkubur</span>)`;
+        } else {
+          discTitleEl.textContent = `TUMPUKAN BUANGAN (Total: ${totalDisc} Kartu — Ambil #1-#${totalDisc} & Otomatis Jadi):`;
+        }
       }
-      setTimeout(() => { discContainer.scrollLeft = discContainer.scrollWidth; }, 20);
+
+      const discSig = top7Discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
+      if (discSig !== lastDiscSig && !currentDrag) {
+        lastDiscSig = discSig;
+        const count = top7Discards.length;
+        discContainer.innerHTML = top7Discards.map((c, i) => {
+          const actualIndex = startIdx + i;
+          const revIdx = count - 1 - i; // 0 is newest (rightmost, AMBIL #1)
+          const badgeText = `AMBIL #${revIdx + 1}`;
+          const canClick = isMyTurn && (st.phase === 'TURN_DRAW');
+          return renderCardHTML(c, {
+            badge: badgeText,
+            onclick: canClick ? `takeDiscard(${actualIndex})` : '',
+            draggable: canClick,
+            ondragstart: canClick ? `onDiscardDragStart(event, ${actualIndex})` : '',
+            ondragend: `onDragEndClean(event)`,
+            hint: `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
+          });
+        }).join('');
+      }
     }
   }
 
@@ -1513,22 +1553,60 @@ function updateUI(st) {
     const myMeldsEl = document.getElementById('my-melds');
     if (myMeldsEl) myMeldsEl.innerHTML = renderMeldsHTML(p0.melds, false);
 
-    // Render 50% Overlapping Hand with Static Slot Hitboxes (Anti-Jitter)
+    // Indikator Giliran Pemain & Step Badge
+    const zoneBottom = document.getElementById('zone-bottom');
+    if (zoneBottom) {
+      if (isMyTurn) zoneBottom.classList.add('my-turn-active');
+      else zoneBottom.classList.remove('my-turn-active');
+    }
+
+    const stepBadge = document.getElementById('my-step-badge');
+    if (stepBadge) {
+      if (isMyTurn) {
+        stepBadge.style.display = 'inline-block';
+        if (st.phase === 'TURN_DRAW') {
+          stepBadge.style.background = 'linear-gradient(90deg, #2563eb, #1d4ed8)';
+          stepBadge.style.color = '#fff';
+          stepBadge.style.boxShadow = '0 0 12px rgba(37,99,235,0.7)';
+          stepBadge.textContent = '👉 TAHAP 1: AMBIL KARTU (PAK / BUANGAN)';
+        } else {
+          stepBadge.style.background = 'linear-gradient(90deg, #ea580c, #c2410c)';
+          stepBadge.style.color = '#fff';
+          stepBadge.style.boxShadow = '0 0 12px rgba(234,88,12,0.7)';
+          stepBadge.textContent = '👉 TAHAP 2: SUSUN & BUANG 1 KARTU';
+        }
+      } else {
+        stepBadge.style.display = 'none';
+      }
+    }
+
+    // Render 50% Overlapping Hand with Caching (Zero Hover Jitter & HTML5 Drag)
     const myHandEl = document.getElementById('my-hand');
     if (myHandEl) {
-      myHandEl.innerHTML = (p0.hand || []).map(c => {
-        const isSel = selectedCards.has(c.id);
-        const canClick = isMyTurn && (st.phase === 'TURN_MELD_DISCARD');
-        const cardHtml = renderCardHTML(c, {
-          selected: isSel,
-          onclick: `toggleCard('${c.id}')`,
-          onrightclick: `quickDiscard('${c.id}')`,
-          draggable: canClick,
-          ondragstart: `onHandCardDragStart(event, '${c.id}')`,
-          hint: 'Klik untuk pilih; Geser / Klik Kanan untuk Buang (B)'
-        });
-        return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''}">${cardHtml}</div>`;
-      }).join('');
+      const handIds = (p0.hand || []).map(c => c.id).join(',');
+      const selIds = Array.from(selectedCards).sort().join(',');
+      const handSig = `${handIds}|${selIds}|${isMyTurn}|${st.phase}`;
+      
+      if (handSig !== lastHandSig && !currentDrag) {
+        lastHandSig = handSig;
+        myHandEl.innerHTML = (p0.hand || []).map(c => {
+          const isSel = selectedCards.has(c.id);
+          const canClick = isMyTurn && (st.phase === 'TURN_MELD_DISCARD');
+          const cardHtml = renderCardHTML(c, {
+            selected: isSel
+          });
+          return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''}"
+                       data-card-id="${c.id}"
+                       draggable="${canClick}"
+                       ondragstart="onHandCardDragStart(event, '${c.id}')"
+                       ondragend="onDragEndClean(event)"
+                       onclick="toggleCard('${c.id}')"
+                       oncontextmenu="quickDiscard('${c.id}'); return false;"
+                       title="Klik untuk pilih; Geser ke Buangan / Klik Kanan untuk Buang (B)">
+            ${cardHtml}
+          </div>`;
+        }).join('');
+      }
     }
   }
 }
@@ -1536,7 +1614,14 @@ function updateUI(st) {
 function toggleCard(cardId) {
   if (selectedCards.has(cardId)) selectedCards.delete(cardId);
   else selectedCards.add(cardId);
-  if (latestState) updateUI(latestState);
+  const slot = document.querySelector(`.hand-card-slot[data-card-id="${cardId}"]`);
+  if (slot) {
+    const isSel = selectedCards.has(cardId);
+    slot.classList.toggle('selected-slot', isSel);
+    const cardEl = slot.querySelector('.card');
+    if (cardEl) cardEl.classList.toggle('selected', isSel);
+  }
+  lastHandSig = ''; // Force sync on next poll
 }
 
 function quickDiscard(cardId) {
@@ -1607,42 +1692,68 @@ function togglePause() {
 }
 
 // Drag & Drop
+function onDragEndClean(e) {
+  currentDrag = null;
+  const zb = document.getElementById('zone-bottom');
+  if (zb) { zb.classList.remove('drop-target-active'); zb.style.borderColor = ''; }
+  const dr = document.getElementById('discard-rail');
+  if (dr) { dr.classList.remove('drop-target-discard'); dr.style.borderColor = ''; }
+}
+
 function onPakDragStart(e) {
   if (!latestState) return;
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_DRAW');
   if (!isMyTurn) { e.preventDefault(); return; }
   currentDrag = { type: 'PAK' };
   e.dataTransfer.setData('text/plain', 'PAK');
+  e.dataTransfer.effectAllowed = 'copy';
+  const zb = document.getElementById('zone-bottom');
+  if (zb) zb.classList.add('drop-target-active');
 }
 
 function onDiscardDragStart(e, idx) {
+  if (!latestState) return;
+  const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_DRAW');
+  if (!isMyTurn) { e.preventDefault(); return; }
   currentDrag = { type: 'DISCARD', idx: idx };
   e.dataTransfer.setData('text/plain', 'DISCARD_' + idx);
+  e.dataTransfer.effectAllowed = 'copy';
+  const zb = document.getElementById('zone-bottom');
+  if (zb) zb.classList.add('drop-target-active');
 }
 
 function onHandCardDragStart(e, cardId) {
+  if (!latestState) return;
+  const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
+  if (!isMyTurn) { e.preventDefault(); return; }
   currentDrag = { type: 'HAND', cardId: cardId };
   e.dataTransfer.setData('text/plain', cardId);
+  e.dataTransfer.effectAllowed = 'move';
+  const dr = document.getElementById('discard-rail');
+  if (dr) dr.classList.add('drop-target-discard');
 }
 
 function onDiscardDragOver(e) {
   if (currentDrag && currentDrag.type === 'HAND') {
     e.preventDefault();
-    document.getElementById('discard-rail').style.borderColor = '#4ade80';
+    e.dataTransfer.dropEffect = 'move';
+    const dr = document.getElementById('discard-rail');
+    if (dr) dr.classList.add('drop-target-discard');
   }
 }
 
 function onDiscardDragLeave(e) {
-  document.getElementById('discard-rail').style.borderColor = 'rgba(250, 204, 21, 0.4)';
+  // Biarkan visual feedback tetap aktif sampai drop atau dragend
 }
 
 function onDiscardDrop(e) {
   e.preventDefault();
-  document.getElementById('discard-rail').style.borderColor = 'rgba(250, 204, 21, 0.4)';
-  if (currentDrag && currentDrag.type === 'HAND') {
-    const cid = currentDrag.cardId;
-    currentDrag = null;
+  const dragInfo = currentDrag;
+  onDragEndClean(e);
+  if (dragInfo && dragInfo.type === 'HAND') {
+    const cid = dragInfo.cardId;
     selectedCards.clear();
+    lastHandSig = '';
     sendAction('DISCARD', { card_id: cid });
   }
 }
@@ -1650,23 +1761,26 @@ function onDiscardDrop(e) {
 function onHandDragOver(e) {
   if (currentDrag && (currentDrag.type === 'PAK' || currentDrag.type === 'DISCARD')) {
     e.preventDefault();
-    document.getElementById('zone-bottom').style.borderColor = '#4ade80';
+    e.dataTransfer.dropEffect = 'copy';
+    const zb = document.getElementById('zone-bottom');
+    if (zb) zb.classList.add('drop-target-active');
   }
 }
 
 function onHandDragLeave(e) {
-  document.getElementById('zone-bottom').style.borderColor = 'rgba(250, 204, 21, 0.4)';
+  // Biarkan visual feedback tetap aktif sampai drop atau dragend
 }
 
 function onHandDrop(e) {
   e.preventDefault();
-  document.getElementById('zone-bottom').style.borderColor = 'rgba(250, 204, 21, 0.4)';
-  if (currentDrag && currentDrag.type === 'PAK') {
-    currentDrag = null;
+  const dragInfo = currentDrag;
+  onDragEndClean(e);
+  if (dragInfo && dragInfo.type === 'PAK') {
+    lastHandSig = '';
     sendAction('DRAW_DECK');
-  } else if (currentDrag && currentDrag.type === 'DISCARD') {
-    const idx = currentDrag.idx;
-    currentDrag = null;
+  } else if (dragInfo && dragInfo.type === 'DISCARD') {
+    const idx = dragInfo.idx;
+    lastHandSig = '';
     takeDiscard(idx);
   }
 }
