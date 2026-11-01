@@ -70,6 +70,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>Remi Nusantara 2D Online - Royale Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -516,7 +518,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .c-corner-tl {
     position: absolute;
     top: 4px;
-    left: 5px;
+    left: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -526,7 +528,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .c-corner-br {
     position: absolute;
     bottom: 4px;
-    right: 5px;
+    right: 6px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -535,14 +537,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
     pointer-events: none;
   }
   .c-rank {
-    font-family: 'Cinzel', Georgia, serif;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     font-weight: 900;
-    font-size: 15px;
+    font-size: 17px;
+    line-height: 1;
     letter-spacing: -0.5px;
   }
   .c-suit-mini {
-    font-size: 10px;
-    margin-top: 1px;
+    font-size: 13.5px;
+    line-height: 1;
+    margin-top: 1.5px;
   }
 
   /* CENTER SUIT ICON */
@@ -551,10 +555,10 @@ HTML_PAGE = r"""<!DOCTYPE html>
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 34px;
+    font-size: 38px;
     line-height: 1;
     pointer-events: none;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.06));
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
   }
 
   /* TOP-RIGHT WILD RIBBON */
@@ -574,34 +578,51 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
 
   /* BOTTOM-LEFT ACTION / POINT BADGE (ZERO OVERLAP!) */
-  .c-badge-pill {
+  .c-point-pill {
     position: absolute;
-    bottom: 4px;
-    left: 5px;
+    top: 4px;
+    right: 5px;
+    font-size: 8.5px;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 999px;
     background: rgba(15, 23, 42, 0.08);
     border: 1px solid rgba(15, 23, 42, 0.14);
-    border-radius: 999px;
-    padding: 1px 5px;
-    font-size: 8px;
-    font-weight: 800;
     letter-spacing: 0.2px;
-    white-space: nowrap;
+    line-height: 1.1;
     pointer-events: none;
   }
-  .card.red .c-badge-pill {
+  .card.red .c-point-pill {
     background: rgba(220, 38, 38, 0.08);
-    border-color: rgba(220, 38, 38, 0.2);
-    color: #991b1b;
+    border-color: rgba(220, 38, 38, 0.22);
+    color: #dc2626;
   }
-  .card.black .c-badge-pill {
+  .card.black .c-point-pill {
     background: rgba(15, 23, 42, 0.08);
     border-color: rgba(15, 23, 42, 0.16);
     color: #1e293b;
   }
-  .card.joker .c-badge-pill {
+  .card.joker .c-point-pill {
     background: rgba(147, 51, 234, 0.12);
     border-color: rgba(147, 51, 234, 0.25);
     color: #7e22ce;
+  }
+
+  .c-badge-pill {
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #facc15;
+    color: #0f172a;
+    font-size: 8px;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 999px;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
   /* SMALL CARDS (Melds) */
@@ -1079,9 +1100,9 @@ let currentConfig = {
 
 function groupBadge(c) {
   if (c.rank === 'JOKER' || c.is_wild) return 'WILD';
-  if (c.rank === 'A') return 'ACE +15';
-  if (['K','Q','J','10'].includes(c.rank)) return 'FACE +10';
-  return 'NUM +5';
+  if (c.rank === 'A') return '+15';
+  if (['K','Q','J','10'].includes(c.rank)) return '+10';
+  return '+5';
 }
 
 function renderCardHTML(c, opts = {}) {
@@ -1116,14 +1137,16 @@ function renderCardHTML(c, opts = {}) {
     </div>`;
   }
 
+  const isActionBadge = Boolean(opts.badge);
+  const pointText = groupBadge(c);
   return `<div class="${cls}" ${onclick} ${onctx} ${draggable} ${ondragstart} ${ondragend} ${ondragover} ${ondragleave} ${ondrop} title="${opts.hint || ''}">
     <div class="c-corner c-corner-tl">
       <span class="c-rank">${topRank}</span>
       <span class="c-suit-mini">${suitIcon}</span>
     </div>
-    ${isWild && c.rank !== 'JOKER' ? '<div class="c-wild-ribbon">WILD</div>' : ''}
+    ${isWild && c.rank !== 'JOKER' ? '<div class="c-wild-ribbon">WILD</div>' : (pointText ? `<div class="c-point-pill">${pointText}</div>` : '')}
     <div class="c-center">${c.rank === 'JOKER' ? '★' : suitIcon}</div>
-    ${badge ? `<div class="c-badge-pill">${badge}</div>` : ''}
+    ${isActionBadge ? `<div class="c-badge-pill">${opts.badge}</div>` : ''}
     <div class="c-corner c-corner-br">
       <span class="c-rank">${topRank}</span>
       <span class="c-suit-mini">${suitIcon}</span>
