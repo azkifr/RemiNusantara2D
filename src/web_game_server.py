@@ -32,7 +32,7 @@ def get_local_ip() -> str:
 
 GAME_LOCK = threading.Lock()
 GAME = RemiGameMatch(room_code="RM1500", num_players=4, turn_timer_sec=30)
-GAME.start_new_round()
+# Server dimulai dalam fase LOBBY agar pemain dapat berkumpul, memilih kursi, dan mengatur nama
 _LAST_TICK_TIME = time.time()
 _BOT_ACCUM = 0.0
 
@@ -45,7 +45,7 @@ def tick_game_state_locked():
     _LAST_TICK_TIME = now
     if dt <= 0.0:
         return
-    if getattr(GAME, "is_paused", False):
+    if getattr(GAME, "is_paused", False) or GAME.phase == "LOBBY":
         return
     if GAME.phase in ("TURN_DRAW", "TURN_MELD_DISCARD"):
         cur_p = GAME.players[GAME.current_turn_seat]
@@ -74,7 +74,8 @@ def _bot_background_worker():
         time.sleep(0.15)
         try:
             with GAME_LOCK:
-                tick_game_state_locked()
+                if GAME.phase != "LOBBY":
+                    tick_game_state_locked()
         except Exception as exc:
             print(f"[WARN] Background worker error: {exc}")
 
@@ -1032,9 +1033,396 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border: 1px solid rgba(255,255,255,0.2);
   }
   .btn-secondary:hover { background: rgba(255,255,255,0.18); color: #fff; }
+
+  /* ======================================================== */
+  /* RUANG LOBBY MULTIPLAYER ROYALE                           */
+  /* ======================================================== */
+  #lobby-screen {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 16px;
+    background: radial-gradient(ellipse at 50% 30%, #175432 0%, #0a311b 55%, #04140b 100%);
+    overflow-y: auto;
+    position: relative;
+    box-sizing: border-box;
+  }
+  .lobby-container {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: auto 0;
+  }
+  .lobby-header-card {
+    background: rgba(4, 22, 14, 0.94);
+    backdrop-filter: blur(14px);
+    border: 2px solid rgba(250, 204, 21, 0.45);
+    border-radius: 16px;
+    padding: 16px 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.65), inset 0 0 20px rgba(250, 204, 21, 0.08);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .lobby-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .lobby-main-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #facc15;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 2px 10px rgba(250, 204, 21, 0.35);
+  }
+  .lobby-sub-title {
+    font-size: 12.5px;
+    color: #cbd5e1;
+    font-weight: 600;
+  }
+  .lobby-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .lobby-profile-card {
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .lobby-name-input-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 260px;
+  }
+  .lobby-name-input {
+    flex: 1;
+    background: #0f172a;
+    border: 1.5px solid #475569;
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: #f8fafc;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .lobby-name-input:focus {
+    outline: none;
+    border-color: #facc15;
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
+  }
+  .lobby-seats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    width: 100%;
+  }
+  .seat-card {
+    background: rgba(4, 24, 15, 0.88);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .seat-card.seat-me {
+    border-color: #4ade80;
+    background: radial-gradient(circle at 50% 20%, rgba(21, 128, 61, 0.45) 0%, rgba(4, 24, 15, 0.95) 80%);
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3), 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .seat-card.seat-human {
+    border-color: #38bdf8;
+    background: radial-gradient(circle at 50% 20%, rgba(2, 132, 199, 0.35) 0%, rgba(4, 24, 15, 0.95) 80%);
+  }
+  .seat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fde047;
+  }
+  .seat-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin: 2px 0;
+  }
+  .seat-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #f8fafc;
+    word-break: break-word;
+    max-width: 100%;
+  }
+  .seat-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+  }
+  .seat-badge-me {
+    background: #16a34a;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+  }
+  .seat-badge-human {
+    background: #0284c7;
+    color: #fff;
+  }
+  .seat-badge-bot {
+    background: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+  }
+  .lobby-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.14s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-claim {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+  }
+  .btn-claim:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-leave {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+  }
+  .btn-leave:hover { background: rgba(239, 68, 68, 0.35); }
+  .btn-switch {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid #38bdf8;
+    color: #bae6fd;
+  }
+  .btn-switch:hover { background: rgba(56, 189, 248, 0.28); }
+  .seat-sub-actions {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+  }
+  .seat-sub-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 6px;
+    padding: 4px 6px;
+    color: #cbd5e1;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s ease;
+  }
+  .seat-sub-btn:hover {
+    background: rgba(255,255,255,0.16);
+    color: #fff;
+  }
+  .lobby-config-card {
+    background: rgba(4, 22, 14, 0.9);
+    border: 1px solid rgba(250, 204, 21, 0.28);
+    border-radius: 14px;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .lobby-start-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 6px 0;
+  }
+  .btn-lobby-start {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #fff;
+    border: 2px solid #4ade80;
+    border-radius: 12px;
+    padding: 12px 40px;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.4), 0 6px 18px rgba(0,0,0,0.4);
+    transition: all 0.16s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+  }
+  .btn-lobby-start:hover {
+    filter: brightness(1.12);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 0 28px rgba(74, 222, 128, 0.6), 0 8px 22px rgba(0,0,0,0.5);
+  }
+
+  /* TOAST NOTIFICATION */
+  #toast-notif {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(40px);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1.5px solid #facc15;
+    border-radius: 999px;
+    padding: 8px 20px;
+    color: #facc15;
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.65), 0 0 15px rgba(250, 204, 21, 0.3);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  #toast-notif.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 </style>
 </head>
 <body>
+
+<div id="lobby-screen">
+  <div class="lobby-container">
+    <!-- HEADER -->
+    <div class="lobby-header-card">
+      <div class="lobby-title-group">
+        <div class="lobby-main-title">
+          <span>👑</span> REMI NUSANTARA 2D — RUANG LOBBY
+        </div>
+        <div class="lobby-sub-title" id="lobby-status-msg">
+          Pilih kursi Anda, atur konfigurasi meja, dan ajak teman mabar!
+        </div>
+      </div>
+      <div class="lobby-header-actions">
+        <button class="header-dash-btn" onclick="copyLobbyLink()" style="background:rgba(250,204,21,0.18);border-color:#facc15;color:#facc15;">
+          📋 SALIN LINK LOBBY
+        </button>
+        <button id="btn-lobby-spectate" class="header-dash-btn" onclick="spectateGame()" style="display:none;background:rgba(56,189,248,0.2);border-color:#38bdf8;color:#38bdf8;">
+          👁️ TONTON PERMAINAN
+        </button>
+      </div>
+    </div>
+
+    <!-- PLAYER PROFILE SETUP -->
+    <div class="lobby-profile-card">
+      <div class="lobby-name-input-box">
+        <span style="font-size:12px;font-weight:800;color:#94a3b8;white-space:nowrap;">NAMA ANDA:</span>
+        <input type="text" id="lobby-player-name" class="lobby-name-input" placeholder="Masukkan nama Anda..." onchange="onLobbyNameChange(this.value)">
+      </div>
+      <div style="font-size:12px;color:#cbd5e1;font-weight:600;">
+        Room Code: <span id="lobby-room-code" style="color:#fde047;font-weight:800;">#RM1500</span> • <span id="lobby-player-summary">Menunggu Pemain...</span>
+      </div>
+    </div>
+
+    <!-- SEAT SELECTION GRID (4 SEATS) -->
+    <div class="lobby-seats-grid" id="lobby-seats-grid"></div>
+
+    <!-- ROOM CONFIGURATION (LIVE SYNC) -->
+    <div class="lobby-config-card">
+      <div style="font-size:13px;font-weight:800;color:#facc15;display:flex;justify-content:space-between;align-items:center;">
+        <span>⚙️ PENGATURAN MEJA PERMAINAN</span>
+        <span style="font-size:11px;color:#94a3b8;font-weight:600;">Otomatis sinkron ke seluruh pemain</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
+        <div class="setting-group" style="margin-bottom:0;">
+          <div class="setting-label">JUMLAH PEMAIN:</div>
+          <div id="lobby-players-pills" class="pills-container">
+            <button class="pill-btn" onclick="updateLobbyConfig('players', 2)">2 Pemain</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('players', 3)">3 Pemain</button>
+            <button class="pill-btn active" onclick="updateLobbyConfig('players', 4)">4 Pemain</button>
+          </div>
+        </div>
+
+        <div class="setting-group" style="margin-bottom:0;">
+          <div class="setting-label">TARGET SKOR: <span id="lobby-score-badge" style="color:#facc15;">1500 Poin</span></div>
+          <div id="lobby-score-pills" class="pills-container">
+            <button class="pill-btn" onclick="updateLobbyConfig('score', 500)">500</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('score', 1000)">1000</button>
+            <button class="pill-btn active" onclick="updateLobbyConfig('score', 1500)">1500</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('score', 2000)">2000</button>
+          </div>
+        </div>
+
+        <div class="setting-group" style="margin-bottom:0;">
+          <div class="setting-label">TIMER GILIRAN: <span id="lobby-timer-badge" style="color:#38bdf8;">30s</span></div>
+          <div id="lobby-timer-pills" class="pills-container">
+            <button class="pill-btn" onclick="updateLobbyConfig('timer', 0)">Tanpa</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('timer', 15)">15s</button>
+            <button class="pill-btn active" onclick="updateLobbyConfig('timer', 30)">30s</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('timer', 45)">45s</button>
+          </div>
+        </div>
+
+        <div class="setting-group" style="margin-bottom:0;">
+          <div class="setting-label">KECEPATAN BOT:</div>
+          <div id="lobby-bot-pills" class="pills-container">
+            <button class="pill-btn" onclick="updateLobbyConfig('botDelay', 0.4)">Cepat</button>
+            <button class="pill-btn active" onclick="updateLobbyConfig('botDelay', 1.0)">Normal</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('botDelay', 1.8)">Santai</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- START GAME CTA -->
+    <div class="lobby-start-box">
+      <button id="btn-start-lobby-game" class="btn-lobby-start" onclick="startLobbyGame()">
+        ▶️ MULAI PERMAINAN
+      </button>
+    </div>
+  </div>
+</div>
 
 <div id="table">
   <!-- TOP HEADER HUD -->
@@ -1045,6 +1433,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <span id="hdr-title" class="header-title">REMI NUSANTARA 2D</span>
       </div>
       <div class="header-btn-group">
+        <button id="btn-to-lobby" onclick="returnToLobby()" class="header-dash-btn" style="background: rgba(239, 68, 68, 0.2); border-color: #f87171; color: #fca5a5;" title="Kembali ke Ruang Lobby">
+          🏠 LOBBY
+        </button>
         <button id="btn-invite" onclick="openInviteModal()" class="header-dash-btn" title="Undang teman bermain via Link atau Room Code">
           👥 UNDANG TEMAN
         </button>
@@ -1254,9 +1645,26 @@ HTML_PAGE = r"""<!DOCTYPE html>
   </div>
 </div>
 
+<!-- TOAST NOTIFICATION -->
+<div id="toast-notif"></div>
+
 <script>
 const urlParams = new URLSearchParams(window.location.search);
-const mySeat = parseInt(urlParams.get('seat') || '0', 10);
+let mySeat = null;
+if (urlParams.has('seat')) {
+  const parsedSeat = parseInt(urlParams.get('seat'), 10);
+  if (!isNaN(parsedSeat)) {
+    mySeat = parsedSeat;
+    sessionStorage.setItem('remi_my_seat', String(mySeat));
+  }
+} else {
+  const storedSeat = sessionStorage.getItem('remi_my_seat');
+  if (storedSeat !== null && storedSeat !== undefined && storedSeat !== '') {
+    const parsedSeat = parseInt(storedSeat, 10);
+    if (!isNaN(parsedSeat)) mySeat = parsedSeat;
+  }
+}
+let spectatorMode = false;
 let selectedCards = new Set();
 let latestState = null;
 let currentDrag = null;
@@ -1383,12 +1791,27 @@ function updateUI(st) {
   latestState = st;
   if (!initialClaimDone) {
     initialClaimDone = true;
-    if (mySeat > 0 && st.players && st.players[mySeat] && st.players[mySeat].is_bot) {
+    if (mySeat !== null && mySeat > 0 && st.players && st.players[mySeat] && st.players[mySeat].is_bot) {
       const storedName = localStorage.getItem('remi_player_name') || `Teman (P${mySeat + 1})`;
       sendAction('CLAIM_SEAT', { seat: mySeat, player_name: storedName });
     }
   }
 
+  const isLobby = (st.phase === 'LOBBY');
+  const lobbyScreen = document.getElementById('lobby-screen');
+  const tableScreen = document.getElementById('table');
+
+  if (isLobby || (mySeat === null && !spectatorMode)) {
+    if (lobbyScreen) lobbyScreen.style.display = 'flex';
+    if (tableScreen) tableScreen.style.display = 'none';
+    renderLobby(st);
+    return;
+  } else {
+    if (lobbyScreen) lobbyScreen.style.display = 'none';
+    if (tableScreen) tableScreen.style.display = 'grid';
+  }
+
+  const activeSeat = (mySeat !== null) ? mySeat : 0;
   const wRank = st.wildcard_rank || '-';
   const isPaused = Boolean(st.is_paused);
   const timerStr = isPaused
@@ -1418,8 +1841,8 @@ function updateUI(st) {
   }
 
   const bannerEl = document.getElementById('hdr-turn-banner');
-  const isMyTurn = (st.current_turn_seat === mySeat) && (st.phase === 'TURN_DRAW' || st.phase === 'TURN_MELD_DISCARD');
-  const p0 = (st.players && st.players[mySeat]) ? st.players[mySeat] : null;
+  const isMyTurn = (mySeat !== null) && (st.current_turn_seat === mySeat) && (st.phase === 'TURN_DRAW' || st.phase === 'TURN_MELD_DISCARD');
+  const p0 = (st.players && st.players[activeSeat]) ? st.players[activeSeat] : null;
 
   // Bersihkan pilihan kartu yang sudah tidak ada di tangan (agar tidak macet saat buang kartu)
   if (p0 && p0.hand) {
@@ -1573,29 +1996,36 @@ function updateUI(st) {
   // Render Opponents
   const n = st.players.length;
   if (n === 2) {
-    renderOpponentZone('top', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('top', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
     document.getElementById('zone-left').style.display = 'none';
     document.getElementById('zone-right').style.display = 'none';
   } else if (n === 3) {
-    renderOpponentZone('left', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
-    renderOpponentZone('top', st.players[(mySeat + 2) % n], st.current_turn_seat === (mySeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
     document.getElementById('zone-left').style.display = 'flex';
     document.getElementById('zone-right').style.display = 'none';
   } else {
     document.getElementById('zone-left').style.display = 'flex';
     document.getElementById('zone-right').style.display = 'flex';
-    renderOpponentZone('left', st.players[(mySeat + 1) % n], st.current_turn_seat === (mySeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
-    renderOpponentZone('top', st.players[(mySeat + 2) % n], st.current_turn_seat === (mySeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
-    renderOpponentZone('right', st.players[(mySeat + 3) % n], st.current_turn_seat === (mySeat + 3) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('right', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, st.show_bot_hands, st.target_score, leaderSeat);
   }
 
   // Render Player Zone
   if (p0) {
-    const isLeader = (leaderSeat !== null && leaderSeat !== undefined && mySeat === leaderSeat && (st.round_number > 1 || p0.total_score > 0));
+    const isLeader = (leaderSeat !== null && leaderSeat !== undefined && activeSeat === leaderSeat && (st.round_number > 1 || p0.total_score > 0));
     const leaderTag = isLeader ? ' [👑 SKOR TERTINGGI]' : '';
     const burnTag = p0.burned_last_round ? ' [TERBAKAR!]' : '';
+    const seatLabel = (mySeat !== null) ? `Kursi ${activeSeat + 1}` : `Kursi ${activeSeat + 1} (Mode Penonton)`;
+    const editNameSpan = (mySeat !== null) ? ` <span style="font-size:10px;color:#38bdf8;cursor:pointer;text-decoration:underline;" onclick="changePlayerNamePrompt()">✎ Ganti Nama</span>` : '';
     document.getElementById('my-info').innerHTML =
-      `Kursi ${mySeat + 1} | ${p0.name}${leaderTag}${burnTag} | Skor: ${p0.total_score} / ${st.target_score} (${p0.last_round_score >= 0 ? '+' : ''}${p0.last_round_score}) <span style="font-size:10px;color:#38bdf8;cursor:pointer;text-decoration:underline;" onclick="changePlayerNamePrompt()">✎ Ganti Nama</span>`;
+      `${seatLabel} | ${p0.name}${leaderTag}${burnTag} | Skor: ${p0.total_score} / ${st.target_score} (${p0.last_round_score >= 0 ? '+' : ''}${p0.last_round_score})${editNameSpan}`;
+
+    const actBar = document.getElementById('action-bar');
+    if (actBar) {
+      actBar.style.display = (mySeat === null) ? 'none' : 'flex';
+    }
 
     const myTurnBadge = document.getElementById('my-turn-badge');
     if (myTurnBadge) myTurnBadge.style.display = isMyTurn ? 'inline-block' : 'none';
@@ -1766,7 +2196,7 @@ async function sendAction(action, data = {}) {
       lastDiscSig = '';
     }
     data.action = action;
-    data.seat = mySeat;
+    data.seat = (mySeat !== null) ? mySeat : 0;
     const res = await fetch(`/api/action?act=${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2019,13 +2449,299 @@ async function saveAndStartGame() {
 }
 
 function changePlayerNamePrompt() {
-  const current = (latestState && latestState.players[mySeat]) ? latestState.players[mySeat].name : 'Player 1';
+  const current = (latestState && mySeat !== null && latestState.players[mySeat]) ? latestState.players[mySeat].name : 'Player 1';
   const newName = prompt("Ganti nama Anda:", current);
   if (newName && newName.trim()) {
     const clean = newName.trim();
     localStorage.setItem('remi_player_name', clean);
+    if (mySeat !== null) {
+      sendAction('CHANGE_NAME', { seat: mySeat, name: clean });
+    }
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast-notif');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => {
+    t.classList.remove('show');
+  }, 2800);
+}
+
+function copyLobbyLink() {
+  const host = window.location.host;
+  const proto = window.location.protocol;
+  const link = `${proto}//${host}/`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => {
+      showToast("Link Lobby berhasil disalin! Bagikan ke teman.");
+    }).catch(() => {
+      prompt("Salin Link Lobby ini:", link);
+    });
+  } else {
+    prompt("Salin Link Lobby ini:", link);
+  }
+}
+
+function copySeatDirectLink(idx) {
+  const host = window.location.host;
+  const proto = window.location.protocol;
+  const link = `${proto}//${host}/?seat=${idx}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => {
+      showToast(`Link Kursi ${idx + 1} berhasil disalin!`);
+    }).catch(() => {
+      prompt(`Salin Link Kursi ${idx + 1}:`, link);
+    });
+  } else {
+    prompt(`Salin Link Kursi ${idx + 1}:`, link);
+  }
+}
+
+function onLobbyNameChange(val) {
+  const clean = (val || '').trim();
+  if (!clean) return;
+  localStorage.setItem('remi_player_name', clean);
+  if (mySeat !== null) {
     sendAction('CHANGE_NAME', { seat: mySeat, name: clean });
   }
+}
+
+async function claimSeat(idx) {
+  const nameInput = document.getElementById('lobby-player-name');
+  const name = (nameInput ? nameInput.value.trim() : '') || localStorage.getItem('remi_player_name') || `Pemain ${idx + 1}`;
+  localStorage.setItem('remi_player_name', name);
+  sessionStorage.setItem('remi_my_seat', String(idx));
+  mySeat = idx;
+
+  const url = new URL(window.location);
+  url.searchParams.set('seat', idx);
+  window.history.replaceState({}, '', url);
+
+  await sendAction('CLAIM_SEAT', { seat: idx, player_name: name });
+  showToast(`Anda menduduki Kursi ${idx + 1}!`);
+}
+
+async function leaveSeat(idx) {
+  await sendAction('LEAVE_SEAT', { seat: idx });
+  sessionStorage.removeItem('remi_my_seat');
+  mySeat = null;
+
+  const url = new URL(window.location);
+  url.searchParams.delete('seat');
+  window.history.replaceState({}, '', url);
+
+  showToast(`Anda meninggalkan Kursi ${idx + 1}.`);
+}
+
+async function toggleSeatBot(idx, isBot) {
+  await sendAction('SET_BOT', { seat: idx, is_bot: isBot });
+  showToast(isBot ? `Kursi ${idx + 1} diatur sebagai Bot.` : `Kursi ${idx + 1} dibuka untuk pemain lain.`);
+}
+
+function spectateGame() {
+  spectatorMode = true;
+  const lobbyScreen = document.getElementById('lobby-screen');
+  const tableScreen = document.getElementById('table');
+  if (lobbyScreen) lobbyScreen.style.display = 'none';
+  if (tableScreen) tableScreen.style.display = 'grid';
+  showToast("Mode Penonton Aktif!");
+}
+
+function returnToLobby() {
+  if (confirm("Kembali ke Ruang Lobby? Pertandingan saat ini akan di-reset.")) {
+    sendAction('RESET_TO_LOBBY');
+  }
+}
+
+async function startLobbyGame() {
+  if (latestState && latestState.phase !== 'LOBBY') {
+    if (mySeat === null) spectatorMode = true;
+    const lobbyScreen = document.getElementById('lobby-screen');
+    const tableScreen = document.getElementById('table');
+    if (lobbyScreen) lobbyScreen.style.display = 'none';
+    if (tableScreen) tableScreen.style.display = 'grid';
+    return;
+  }
+
+  // Jika belum memilih kursi, dudukkan di kursi pertama yang kosong/bot
+  if (mySeat === null && latestState && latestState.players) {
+    const freeIdx = latestState.players.findIndex(p => p.is_bot);
+    const targetSeat = freeIdx >= 0 ? freeIdx : 0;
+    const nameInput = document.getElementById('lobby-player-name');
+    const name = (nameInput ? nameInput.value.trim() : '') || localStorage.getItem('remi_player_name') || 'Pemain 1';
+    localStorage.setItem('remi_player_name', name);
+    sessionStorage.setItem('remi_my_seat', String(targetSeat));
+    mySeat = targetSeat;
+    const url = new URL(window.location);
+    url.searchParams.set('seat', targetSeat);
+    window.history.replaceState({}, '', url);
+    await sendAction('CLAIM_SEAT', { seat: targetSeat, player_name: name });
+  }
+
+  await sendAction('START_GAME', { seat: (mySeat !== null ? mySeat : 0) });
+  showToast("Permainan dimulai!");
+}
+
+async function updateLobbyConfig(type, val) {
+  currentConfig[type] = val;
+  const nameInput = document.getElementById('lobby-player-name');
+  const myName = (nameInput ? nameInput.value.trim() : '') || localStorage.getItem('remi_player_name') || 'Pemain 1';
+
+  try {
+    await sendAction('CONFIGURE_ONLY', {
+      turn_timer_sec: currentConfig.timer,
+      target_score: currentConfig.score,
+      num_players: currentConfig.players,
+      player_name: myName,
+      bot_delay_sec: currentConfig.botDelay
+    });
+    showToast("Pengaturan meja diperbarui!");
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function renderLobby(st) {
+  if (!st) return;
+
+  const roomCodeEl = document.getElementById('lobby-room-code');
+  if (roomCodeEl) roomCodeEl.textContent = `#${st.room_code || 'RM1500'}`;
+
+  const statusMsgEl = document.getElementById('lobby-status-msg');
+  if (statusMsgEl) {
+    if (st.phase !== 'LOBBY') {
+      statusMsgEl.innerHTML = `<span style="color:#4ade80;font-weight:700;">★ Pertandingan Sedang Berlangsung (Ronde ${st.round_number}) ★</span>`;
+    } else {
+      statusMsgEl.textContent = st.status_message || 'Pilih kursi Anda, atur konfigurasi meja, dan ajak teman mabar!';
+    }
+  }
+
+  const nameInput = document.getElementById('lobby-player-name');
+  if (nameInput && !nameInput.value) {
+    const savedName = localStorage.getItem('remi_player_name') || 'Pemain 1';
+    nameInput.value = savedName;
+  }
+
+  const players = st.players || [];
+  const humanCount = players.filter(p => !p.is_bot).length;
+  const botCount = players.filter(p => p.is_bot).length;
+  const summaryEl = document.getElementById('lobby-player-summary');
+  if (summaryEl) {
+    summaryEl.textContent = `${players.length} Kursi (${humanCount} Manusia, ${botCount} Bot)`;
+  }
+
+  const spectateBtn = document.getElementById('btn-lobby-spectate');
+  if (spectateBtn) {
+    spectateBtn.style.display = (st.phase !== 'LOBBY') ? 'inline-flex' : 'none';
+  }
+
+  const startBtn = document.getElementById('btn-start-lobby-game');
+  if (startBtn) {
+    if (st.phase !== 'LOBBY') {
+      startBtn.innerHTML = '👁️ MASUK KE MEJA PERMAINAN';
+      startBtn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+      startBtn.style.borderColor = '#38bdf8';
+    } else {
+      startBtn.innerHTML = '▶️ MULAI PERMAINAN';
+      startBtn.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+      startBtn.style.borderColor = '#4ade80';
+    }
+  }
+
+  // Render 4 Seat Cards
+  const gridEl = document.getElementById('lobby-seats-grid');
+  if (gridEl) {
+    gridEl.innerHTML = players.map(p => {
+      const isMe = (mySeat === p.seat);
+      const isBot = Boolean(p.is_bot);
+      const isHost = (p.seat === 0);
+
+      let cardClass = 'seat-card';
+      if (isMe) cardClass += ' seat-me';
+      else if (!isBot) cardClass += ' seat-human';
+
+      let statusBadge = '';
+      if (isMe) {
+        statusBadge = '<span class="seat-badge seat-badge-me">★ ANDA ★</span>';
+      } else if (!isBot) {
+        statusBadge = '<span class="seat-badge seat-badge-human">MANUSIA</span>';
+      } else {
+        statusBadge = '<span class="seat-badge seat-badge-bot">BOT AI</span>';
+      }
+
+      let avatar = '👤';
+      if (isHost && isMe) avatar = '👑';
+      else if (isHost) avatar = '👑';
+      else if (isBot) avatar = '🤖';
+
+      let mainBtn = '';
+      if (isMe) {
+        mainBtn = `<button class="lobby-btn btn-leave" onclick="leaveSeat(${p.seat})">🚪 TINGGALKAN KURSI</button>`;
+      } else if (mySeat === null) {
+        mainBtn = `<button class="lobby-btn btn-claim" onclick="claimSeat(${p.seat})">🪑 DUDUK DI SINI</button>`;
+      } else {
+        mainBtn = `<button class="lobby-btn btn-switch" onclick="claimSeat(${p.seat})">🔄 PINDAH KE SINI</button>`;
+      }
+
+      let subActionBtn = '';
+      if (isBot) {
+        subActionBtn = `<button class="seat-sub-btn" onclick="toggleSeatBot(${p.seat}, false)">👤 Buka untuk Teman</button>`;
+      } else if (!isMe) {
+        subActionBtn = `<button class="seat-sub-btn" onclick="toggleSeatBot(${p.seat}, true)">🤖 Ganti Bot</button>`;
+      } else {
+        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.6;cursor:default;">Kursi Aktif</span>`;
+      }
+
+      return `<div class="${cardClass}">
+        <div class="seat-header">
+          <span>Kursi ${p.seat + 1} ${isHost ? '(Host)' : ''}</span>
+          ${statusBadge}
+        </div>
+        <div class="seat-avatar">${avatar}</div>
+        <div class="seat-name">${p.name}</div>
+        ${mainBtn}
+        <div class="seat-sub-actions">
+          ${subActionBtn}
+          <button class="seat-sub-btn" onclick="copySeatDirectLink(${p.seat})" title="Salin link langsung">🔗 Link</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  syncLobbyConfigPillsUI(st);
+}
+
+function syncLobbyConfigPillsUI(st) {
+  const n = st.max_players || st.players.length;
+  highlightPills('lobby-players-pills', n);
+
+  const score = st.target_score;
+  highlightPills('lobby-score-pills', score);
+  const scoreBadge = document.getElementById('lobby-score-badge');
+  if (scoreBadge) scoreBadge.textContent = `${score} Poin`;
+
+  const timer = st.turn_timer_sec;
+  highlightPills('lobby-timer-pills', timer);
+  const timerBadge = document.getElementById('lobby-timer-badge');
+  if (timerBadge) timerBadge.textContent = timer === 0 ? 'Tanpa' : `${timer}s`;
+
+  const delay = st.bot_delay_sec || 1.0;
+  highlightPills('lobby-bot-pills', delay);
+}
+
+function highlightPills(containerId, activeVal) {
+  const btns = document.querySelectorAll(`#${containerId} .pill-btn`);
+  btns.forEach(b => {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(String(activeVal))) {
+      b.classList.add('active');
+    } else {
+      b.classList.remove('active');
+    }
+  });
 }
 
 // Keyboard Shortcuts
@@ -2045,7 +2761,8 @@ document.addEventListener('keydown', (e) => {
 // Real-time Polling
 setInterval(async () => {
   try {
-    const res = await fetch(`/api/state?seat=${mySeat}`);
+    const qSeat = (mySeat !== null) ? `?seat=${mySeat}` : '';
+    const res = await fetch(`/api/state${qSeat}`);
     const data = await res.json();
     if (data.state) updateUI(data.state);
   } catch (e) {}
@@ -2054,8 +2771,9 @@ setInterval(async () => {
 </body>
 </html>"""
 
-def _format_state_dict(seat: int) -> dict:
-    st = GAME.to_state_dict(viewer_seat=seat)
+def _format_state_dict(seat: Optional[int]) -> dict:
+    viewer_seat = seat if (seat is not None and 0 <= seat < len(GAME.players)) else 0
+    st = GAME.to_state_dict(viewer_seat=viewer_seat)
     st["host_ip"] = get_local_ip()
     st["server_port"] = 8080
     st["deck_count"] = st.get("draw_pile_count", 0)
@@ -2074,7 +2792,8 @@ class RemiWebHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/state":
             qs = parse_qs(parsed.query)
-            seat = int(qs.get("seat", ["0"])[0])
+            seat_param = qs.get("seat", [None])[0]
+            seat = int(seat_param) if (seat_param is not None and str(seat_param).isdigit()) else None
             with GAME_LOCK:
                 tick_game_state_locked()
                 st = _format_state_dict(seat)
@@ -2104,11 +2823,31 @@ class RemiWebHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
         payload = json.loads(raw)
-        seat = int(payload.get("seat", qs.get("seat", ["0"])[0]))
+        seat_raw = payload.get("seat", qs.get("seat", [None])[0])
+        seat = int(seat_raw) if (seat_raw is not None and str(seat_raw).isdigit()) else 0
         action = payload.get("action") or qs.get("act", [""])[0]
 
         with GAME_LOCK:
-            if action == "CONFIGURE_AND_START":
+            if action in ("START_GAME", "START_ROUND"):
+                bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                for idx, p in enumerate(GAME.players):
+                    if p.is_bot and (not p.name or "Menunggu" in p.name):
+                        p.name = bot_names[idx % len(bot_names)]
+                GAME.start_new_round()
+                GAME.status_message = f"Permainan dimulai! Ronde {GAME.round_number} aktif."
+            elif action in ("RESET_TO_LOBBY", "TO_LOBBY"):
+                GAME.reset_match()
+                GAME.status_message = "Kembali ke Ruang Lobby. Silakan pilih kursi atau atur meja."
+            elif action == "LEAVE_SEAT":
+                seat_idx = int(payload.get("seat", seat))
+                if 0 <= seat_idx < len(GAME.players):
+                    old_name = GAME.players[seat_idx].name
+                    GAME.players[seat_idx].is_bot = True
+                    GAME.players[seat_idx].auto_pilot = True
+                    bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                    GAME.players[seat_idx].name = bot_names[seat_idx % len(bot_names)]
+                    GAME.status_message = f"{old_name} meninggalkan Kursi {seat_idx + 1}."
+            elif action == "CONFIGURE_AND_START":
                 GAME.configure_match(
                     num_players=payload.get("num_players"),
                     turn_timer_sec=payload.get("turn_timer_sec"),
@@ -2143,12 +2882,17 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     GAME.status_message = f"{old_name} mengubah nama menjadi {name}."
             elif action == "SET_BOT":
                 seat_idx = int(payload.get("seat", seat))
-                is_bot = bool(payload.get("is_bot", True))
                 if 0 <= seat_idx < len(GAME.players):
+                    is_bot = bool(payload.get("is_bot", True))
                     GAME.players[seat_idx].is_bot = is_bot
                     GAME.players[seat_idx].auto_pilot = is_bot
-                    st_str = "Bot" if is_bot else "Manusia"
-                    GAME.status_message = f"Kursi {seat_idx + 1} diatur sebagai {st_str}."
+                    if is_bot:
+                        bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                        GAME.players[seat_idx].name = bot_names[seat_idx % len(bot_names)]
+                        GAME.status_message = f"Kursi {seat_idx + 1} diatur sebagai Bot."
+                    else:
+                        GAME.players[seat_idx].name = f"Pemain {seat_idx + 1} (Menunggu...)"
+                        GAME.status_message = f"Kursi {seat_idx + 1} dibuka untuk teman/pemain lain."
             elif action == "RESET_MATCH":
                 GAME.reset_match()
                 GAME.start_new_round()
