@@ -1665,6 +1665,11 @@ if (urlParams.has('seat')) {
   }
 }
 let spectatorMode = false;
+let myPlayerId = localStorage.getItem('remi_player_id');
+if (!myPlayerId) {
+  myPlayerId = 'usr_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+  localStorage.setItem('remi_player_id', myPlayerId);
+}
 let selectedCards = new Set();
 let latestState = null;
 let currentDrag = null;
@@ -1789,11 +1794,34 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
 
 function updateUI(st) {
   latestState = st;
+
+  // Sinkronisasi status kepemilikan kursi dengan server (cegah duplicate seat & race condition)
+  if (st.players) {
+    const myOwnedSeat = st.players.findIndex(p => !p.is_bot && p.player_id && p.player_id === myPlayerId);
+    if (myOwnedSeat >= 0) {
+      if (mySeat !== myOwnedSeat) {
+        mySeat = myOwnedSeat;
+        sessionStorage.setItem('remi_my_seat', String(myOwnedSeat));
+        const url = new URL(window.location);
+        url.searchParams.set('seat', myOwnedSeat);
+        window.history.replaceState({}, '', url);
+      }
+    } else if (mySeat !== null) {
+      const curP = st.players[mySeat];
+      if (!curP || curP.is_bot || (curP.player_id && curP.player_id !== myPlayerId)) {
+        mySeat = null;
+        sessionStorage.removeItem('remi_my_seat');
+        const url = new URL(window.location);
+        url.searchParams.delete('seat');
+        window.history.replaceState({}, '', url);
+      }
+    }
+  }
+
   if (!initialClaimDone) {
     initialClaimDone = true;
-    if (mySeat !== null && mySeat > 0 && st.players && st.players[mySeat] && st.players[mySeat].is_bot) {
-      const storedName = localStorage.getItem('remi_player_name') || `Teman (P${mySeat + 1})`;
-      sendAction('CLAIM_SEAT', { seat: mySeat, player_name: storedName });
+    if (mySeat !== null && st.players && st.players[mySeat] && st.players[mySeat].is_bot) {
+      claimSeat(mySeat);
     }
   }
 
@@ -2197,6 +2225,7 @@ async function sendAction(action, data = {}) {
     }
     data.action = action;
     data.seat = (mySeat !== null) ? mySeat : 0;
+    data.player_id = myPlayerId;
     const res = await fetch(`/api/action?act=${action}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2204,6 +2233,7 @@ async function sendAction(action, data = {}) {
     });
     const st = await res.json();
     if (st && st.state) updateUI(st.state);
+    return st;
   } catch (e) {
     console.error("Action error:", e);
   }
@@ -2514,27 +2544,62 @@ async function claimSeat(idx) {
   const nameInput = document.getElementById('lobby-player-name');
   const name = (nameInput ? nameInput.value.trim() : '') || localStorage.getItem('remi_player_name') || `Pemain ${idx + 1}`;
   localStorage.setItem('remi_player_name', name);
-  sessionStorage.setItem('remi_my_seat', String(idx));
-  mySeat = idx;
 
-  const url = new URL(window.location);
-  url.searchParams.set('seat', idx);
-  window.history.replaceState({}, '', url);
-
-  await sendAction('CLAIM_SEAT', { seat: idx, player_name: name });
-  showToast(`Anda menduduki Kursi ${idx + 1}!`);
+  try {
+    const res = await fetch(`/api/action?act=CLAIM_SEAT`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'CLAIM_SEAT',
+        seat: idx,
+        player_name: name,
+        player_id: myPlayerId
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      mySeat = idx;
+      sessionStorage.setItem('remi_my_seat', String(idx));
+      const url = new URL(window.location);
+      url.searchParams.set('seat', idx);
+      window.history.replaceState({}, '', url);
+      showToast(`✅ Anda berhasil menempati Kursi ${idx + 1}!`);
+    } else {
+      showToast(`⚠️ ${data.error || 'Kursi ini baru saja diambil oleh pemain lain!'}`);
+      if (mySeat === idx) {
+        mySeat = null;
+        sessionStorage.removeItem('remi_my_seat');
+      }
+    }
+    if (data.state) updateUI(data.state);
+  } catch (e) {
+    console.error("Claim error:", e);
+    showToast("⚠️ Gagal menghubungi server. Silakan coba lagi.");
+  }
 }
 
 async function leaveSeat(idx) {
-  await sendAction('LEAVE_SEAT', { seat: idx });
-  sessionStorage.removeItem('remi_my_seat');
-  mySeat = null;
-
-  const url = new URL(window.location);
-  url.searchParams.delete('seat');
-  window.history.replaceState({}, '', url);
-
-  showToast(`Anda meninggalkan Kursi ${idx + 1}.`);
+  try {
+    const res = await fetch(`/api/action?act=LEAVE_SEAT`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'LEAVE_SEAT',
+        seat: idx,
+        player_id: myPlayerId
+      })
+    });
+    const data = await res.json();
+    sessionStorage.removeItem('remi_my_seat');
+    mySeat = null;
+    const url = new URL(window.location);
+    url.searchParams.delete('seat');
+    window.history.replaceState({}, '', url);
+    showToast(`Anda meninggalkan Kursi ${idx + 1}.`);
+    if (data.state) updateUI(data.state);
+  } catch (e) {
+    console.error("Leave seat error:", e);
+  }
 }
 
 async function toggleSeatBot(idx, isBot) {
@@ -2567,19 +2632,12 @@ async function startLobbyGame() {
     return;
   }
 
-  // Jika belum memilih kursi, dudukkan di kursi pertama yang kosong/bot
+  // Jika belum memilih kursi, dudukkan di kursi pertama yang kosong/bot secara atomic
   if (mySeat === null && latestState && latestState.players) {
     const freeIdx = latestState.players.findIndex(p => p.is_bot);
-    const targetSeat = freeIdx >= 0 ? freeIdx : 0;
-    const nameInput = document.getElementById('lobby-player-name');
-    const name = (nameInput ? nameInput.value.trim() : '') || localStorage.getItem('remi_player_name') || 'Pemain 1';
-    localStorage.setItem('remi_player_name', name);
-    sessionStorage.setItem('remi_my_seat', String(targetSeat));
-    mySeat = targetSeat;
-    const url = new URL(window.location);
-    url.searchParams.set('seat', targetSeat);
-    window.history.replaceState({}, '', url);
-    await sendAction('CLAIM_SEAT', { seat: targetSeat, player_name: name });
+    if (freeIdx >= 0) {
+      await claimSeat(freeIdx);
+    }
   }
 
   await sendAction('START_GAME', { seat: (mySeat !== null ? mySeat : 0) });
@@ -2656,18 +2714,19 @@ function renderLobby(st) {
   const gridEl = document.getElementById('lobby-seats-grid');
   if (gridEl) {
     gridEl.innerHTML = players.map(p => {
-      const isMe = (mySeat === p.seat);
+      const isMe = (p.player_id && p.player_id === myPlayerId) || (mySeat === p.seat && !p.is_bot && (!p.player_id || p.player_id === myPlayerId));
       const isBot = Boolean(p.is_bot);
       const isHost = (p.seat === 0);
+      const isOtherHuman = (!isBot && !isMe);
 
       let cardClass = 'seat-card';
       if (isMe) cardClass += ' seat-me';
-      else if (!isBot) cardClass += ' seat-human';
+      else if (isOtherHuman) cardClass += ' seat-human';
 
       let statusBadge = '';
       if (isMe) {
         statusBadge = '<span class="seat-badge seat-badge-me">★ ANDA ★</span>';
-      } else if (!isBot) {
+      } else if (isOtherHuman) {
         statusBadge = '<span class="seat-badge seat-badge-human">MANUSIA</span>';
       } else {
         statusBadge = '<span class="seat-badge seat-badge-bot">BOT AI</span>';
@@ -2681,6 +2740,8 @@ function renderLobby(st) {
       let mainBtn = '';
       if (isMe) {
         mainBtn = `<button class="lobby-btn btn-leave" onclick="leaveSeat(${p.seat})">🚪 TINGGALKAN KURSI</button>`;
+      } else if (isOtherHuman) {
+        mainBtn = `<button class="lobby-btn" disabled style="background:rgba(255,255,255,0.08);color:#94a3b8;cursor:not-allowed;border:1px solid rgba(255,255,255,0.15);">🔒 TERISI (${p.name})</button>`;
       } else if (mySeat === null) {
         mainBtn = `<button class="lobby-btn btn-claim" onclick="claimSeat(${p.seat})">🪑 DUDUK DI SINI</button>`;
       } else {
@@ -2690,10 +2751,10 @@ function renderLobby(st) {
       let subActionBtn = '';
       if (isBot) {
         subActionBtn = `<button class="seat-sub-btn" onclick="toggleSeatBot(${p.seat}, false)">👤 Buka untuk Teman</button>`;
-      } else if (!isMe) {
-        subActionBtn = `<button class="seat-sub-btn" onclick="toggleSeatBot(${p.seat}, true)">🤖 Ganti Bot</button>`;
+      } else if (isMe) {
+        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.8;color:#4ade80;cursor:default;">Kursi Anda</span>`;
       } else {
-        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.6;cursor:default;">Kursi Aktif</span>`;
+        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.6;cursor:default;">Ditempati</span>`;
       }
 
       return `<div class="${cardClass}">
@@ -2761,8 +2822,10 @@ document.addEventListener('keydown', (e) => {
 // Real-time Polling
 setInterval(async () => {
   try {
-    const qSeat = (mySeat !== null) ? `?seat=${mySeat}` : '';
-    const res = await fetch(`/api/state${qSeat}`);
+    const qParams = new URLSearchParams();
+    if (mySeat !== null) qParams.set('seat', mySeat);
+    if (myPlayerId) qParams.set('pid', myPlayerId);
+    const res = await fetch(`/api/state?${qParams.toString()}`);
     const data = await res.json();
     if (data.state) updateUI(data.state);
   } catch (e) {}
@@ -2794,7 +2857,25 @@ class RemiWebHandler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             seat_param = qs.get("seat", [None])[0]
             seat = int(seat_param) if (seat_param is not None and str(seat_param).isdigit()) else None
+            player_id = qs.get("pid", [""])[0].strip()
             with GAME_LOCK:
+                now = time.time()
+                if player_id:
+                    for p in GAME.players:
+                        if not p.is_bot and getattr(p, "player_id", "") == player_id:
+                            p.last_seen = now
+                            p.connected = True
+                if GAME.phase == "LOBBY":
+                    for idx, p in enumerate(GAME.players):
+                        if not p.is_bot and getattr(p, "player_id", ""):
+                            if (now - getattr(p, "last_seen", now)) > 45.0:
+                                p.is_bot = True
+                                p.auto_pilot = True
+                                p.player_id = ""
+                                bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                                p.name = bot_names[idx % len(bot_names)]
+                                GAME.status_message = f"Kursi {idx + 1} dibuka kembali karena pemain terputus."
+
                 tick_game_state_locked()
                 st = _format_state_dict(seat)
             self._send_json({"state": st})
@@ -2826,27 +2907,106 @@ class RemiWebHandler(BaseHTTPRequestHandler):
         seat_raw = payload.get("seat", qs.get("seat", [None])[0])
         seat = int(seat_raw) if (seat_raw is not None and str(seat_raw).isdigit()) else 0
         action = payload.get("action") or qs.get("act", [""])[0]
+        player_id = str(payload.get("player_id", "")).strip()
 
         with GAME_LOCK:
+            now = time.time()
+            if player_id:
+                for p in GAME.players:
+                    if not p.is_bot and getattr(p, "player_id", "") == player_id:
+                        p.last_seen = now
+                        p.connected = True
+
             if action in ("START_GAME", "START_ROUND"):
-                bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
-                for idx, p in enumerate(GAME.players):
-                    if p.is_bot and (not p.name or "Menunggu" in p.name):
-                        p.name = bot_names[idx % len(bot_names)]
-                GAME.start_new_round()
-                GAME.status_message = f"Permainan dimulai! Ronde {GAME.round_number} aktif."
+                if GAME.phase == "LOBBY":
+                    bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                    for idx, p in enumerate(GAME.players):
+                        if p.is_bot and (not p.name or "Menunggu" in p.name):
+                            p.name = bot_names[idx % len(bot_names)]
+                    GAME.start_new_round()
+                    GAME.status_message = f"Permainan dimulai! Ronde {GAME.round_number} aktif."
+                self._send_json({"success": True, "state": _format_state_dict(seat)})
+                return
             elif action in ("RESET_TO_LOBBY", "TO_LOBBY"):
                 GAME.reset_match()
                 GAME.status_message = "Kembali ke Ruang Lobby. Silakan pilih kursi atau atur meja."
+                self._send_json({"success": True, "state": _format_state_dict(None)})
+                return
+            elif action == "CLAIM_SEAT":
+                seat_idx = int(payload.get("seat", seat))
+                name = payload.get("player_name", "").strip() or f"Pemain {seat_idx + 1}"
+                if not (0 <= seat_idx < len(GAME.players)):
+                    self._send_json({"success": False, "error": "Kursi tidak valid.", "state": _format_state_dict(None)})
+                    return
+
+                target_p = GAME.players[seat_idx]
+                target_pid = getattr(target_p, "player_id", "")
+                is_occupied_by_other = (
+                    not target_p.is_bot
+                    and target_pid
+                    and target_pid != player_id
+                    and (now - getattr(target_p, "last_seen", now)) < 35.0
+                )
+
+                if is_occupied_by_other:
+                    self._send_json({
+                        "success": False,
+                        "error": f"Kursi {seat_idx + 1} baru saja diambil oleh {target_p.name}! Silakan pilih kursi lain yang masih tersedia.",
+                        "occupied_by": target_p.name,
+                        "state": _format_state_dict(None)
+                    })
+                    return
+
+                if player_id:
+                    for old_idx, old_p in enumerate(GAME.players):
+                        if old_idx != seat_idx and not old_p.is_bot and getattr(old_p, "player_id", "") == player_id:
+                            old_p.is_bot = True
+                            old_p.auto_pilot = True
+                            old_p.player_id = ""
+                            bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                            old_p.name = bot_names[old_idx % len(bot_names)]
+
+                target_p.is_bot = False
+                target_p.auto_pilot = False
+                target_p.player_id = player_id
+                target_p.name = name
+                target_p.last_seen = now
+                GAME.status_message = f"{name} berhasil menempati Kursi {seat_idx + 1}!"
+                self._send_json({"success": True, "claimed_seat": seat_idx, "state": _format_state_dict(seat_idx)})
+                return
             elif action == "LEAVE_SEAT":
                 seat_idx = int(payload.get("seat", seat))
                 if 0 <= seat_idx < len(GAME.players):
-                    old_name = GAME.players[seat_idx].name
-                    GAME.players[seat_idx].is_bot = True
-                    GAME.players[seat_idx].auto_pilot = True
-                    bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
-                    GAME.players[seat_idx].name = bot_names[seat_idx % len(bot_names)]
-                    GAME.status_message = f"{old_name} meninggalkan Kursi {seat_idx + 1}."
+                    target_p = GAME.players[seat_idx]
+                    target_pid = getattr(target_p, "player_id", "")
+                    if target_pid == player_id or not target_p.is_bot or not target_pid:
+                        old_name = target_p.name
+                        target_p.is_bot = True
+                        target_p.auto_pilot = True
+                        target_p.player_id = ""
+                        bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                        target_p.name = bot_names[seat_idx % len(bot_names)]
+                        GAME.status_message = f"{old_name} meninggalkan Kursi {seat_idx + 1}."
+                self._send_json({"success": True, "state": _format_state_dict(None)})
+                return
+            elif action == "SET_BOT":
+                seat_idx = int(payload.get("seat", seat))
+                if 0 <= seat_idx < len(GAME.players):
+                    is_bot = bool(payload.get("is_bot", True))
+                    target_p = GAME.players[seat_idx]
+                    target_p.is_bot = is_bot
+                    target_p.auto_pilot = is_bot
+                    if is_bot:
+                        target_p.player_id = ""
+                        bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                        target_p.name = bot_names[seat_idx % len(bot_names)]
+                        GAME.status_message = f"Kursi {seat_idx + 1} diatur sebagai Bot."
+                    else:
+                        target_p.name = f"Pemain {seat_idx + 1} (Menunggu...)"
+                        target_p.player_id = ""
+                        GAME.status_message = f"Kursi {seat_idx + 1} dibuka untuk teman/pemain lain."
+                self._send_json({"success": True, "state": _format_state_dict(None)})
+                return
             elif action == "CONFIGURE_AND_START":
                 GAME.configure_match(
                     num_players=payload.get("num_players"),
@@ -2865,14 +3025,6 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     player_name=payload.get("player_name"),
                     bot_delay_sec=payload.get("bot_delay_sec"),
                 )
-            elif action == "CLAIM_SEAT":
-                seat_idx = int(payload.get("seat", seat))
-                name = payload.get("player_name", f"Teman (P{seat_idx + 1})")
-                if 0 <= seat_idx < len(GAME.players):
-                    GAME.players[seat_idx].is_bot = False
-                    GAME.players[seat_idx].auto_pilot = False
-                    GAME.players[seat_idx].name = name
-                    GAME.status_message = f"{name} bergabung di Kursi {seat_idx + 1}!"
             elif action == "CHANGE_NAME":
                 seat_idx = int(payload.get("seat", seat))
                 name = payload.get("name", "").strip()
@@ -2880,19 +3032,6 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     old_name = GAME.players[seat_idx].name
                     GAME.players[seat_idx].name = name
                     GAME.status_message = f"{old_name} mengubah nama menjadi {name}."
-            elif action == "SET_BOT":
-                seat_idx = int(payload.get("seat", seat))
-                if 0 <= seat_idx < len(GAME.players):
-                    is_bot = bool(payload.get("is_bot", True))
-                    GAME.players[seat_idx].is_bot = is_bot
-                    GAME.players[seat_idx].auto_pilot = is_bot
-                    if is_bot:
-                        bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
-                        GAME.players[seat_idx].name = bot_names[seat_idx % len(bot_names)]
-                        GAME.status_message = f"Kursi {seat_idx + 1} diatur sebagai Bot."
-                    else:
-                        GAME.players[seat_idx].name = f"Pemain {seat_idx + 1} (Menunggu...)"
-                        GAME.status_message = f"Kursi {seat_idx + 1} dibuka untuk teman/pemain lain."
             elif action == "RESET_MATCH":
                 GAME.reset_match()
                 GAME.start_new_round()

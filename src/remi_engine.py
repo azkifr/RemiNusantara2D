@@ -432,6 +432,8 @@ class PlayerState:
     connected: bool = True
     afk_strikes: int = 0
     auto_pilot: bool = False
+    player_id: str = ""
+    last_seen: float = 0.0
     hand: List[Card] = field(default_factory=list)
     melds: List[List[Card]] = field(default_factory=list)
     total_score: int = 0
@@ -1777,6 +1779,7 @@ class RemiGameMatch:
                     "seat": p.seat,
                     "name": p.name,
                     "is_bot": p.is_bot,
+                    "player_id": getattr(p, "player_id", ""),
                     "is_ready": p.is_ready,
                     "connected": p.connected,
                     "auto_pilot": p.auto_pilot,
