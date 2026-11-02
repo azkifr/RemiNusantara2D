@@ -423,6 +423,19 @@ def find_best_melds_in_hand(
     return best_melds, best_remaining
 
 
+def has_valid_seri_in_hand_or_melds(player: "PlayerState", wildcard_rank: Optional[str] = None) -> bool:
+    """Mengecek apakah pemain sudah memiliki Seri minimal 3 kartu (di meja atau di tangan)."""
+    if has_valid_seri_meld(player.melds, wildcard_rank):
+        return True
+    if player.hand and len(player.hand) >= 3:
+        melds, _ = find_best_melds_in_hand(player.hand, wildcard_rank=wildcard_rank, already_has_seri=False)
+        for m in melds:
+            val = validate_meld(m, wildcard_rank=wildcard_rank)
+            if val.valid and val.is_seri and len(m) >= 3:
+                return True
+    return False
+
+
 @dataclass
 class PlayerState:
     seat: int
@@ -838,6 +851,8 @@ class RemiGameMatch:
         others = list(player.hand)
         valid_candidates: List[Tuple[int, int, int, int, int, List[Card], str]] = []
         saw_wildcard_substitute_without_close = False
+        has_seri_already = has_valid_seri_in_hand_or_melds(player, self.wildcard_rank)
+        saw_has_seri_without_close = False
 
         for sz in range(2, min(len(others), 6) + 1):
             for comb in combinations(others, sz):
@@ -868,6 +883,11 @@ class RemiGameMatch:
                     rem_pool,
                     forbidden_discard_id=forbidden_id,
                 )
+
+                # Jika sudah memiliki Seri di tangan/meja, mengambil buangan WAJIB langsung menutup ronde!
+                if has_seri_already and not can_close_now:
+                    saw_has_seri_without_close = True
+                    continue
 
                 # Jika memakai Wild Card sebagai pengganti (bukan regular card dengan serinya),
                 # WAJIB hanya boleh dilakukan saat pemain akan menutup kartu pada giliran ini!
@@ -903,6 +923,13 @@ class RemiGameMatch:
                 ))
 
         if not valid_candidates:
+            if saw_has_seri_without_close:
+                return (
+                    False,
+                    f"Karena Anda sudah memiliki Kartu Seri di tangan/meja, mengambil kartu buangan {target_card.id} "
+                    f"hanya diperbolehkan jika langsung dapat MENUTUP RONDE (Wajib Langsung Nutup)!",
+                    None,
+                )
             if saw_wildcard_substitute_without_close:
                 return (
                     False,
@@ -1035,6 +1062,7 @@ class RemiGameMatch:
                 return False, msg
             chosen_meld = auto_meld
 
+        had_seri_before_take = has_valid_seri_in_hand_or_melds(player, self.wildcard_rank)
         self.melds_count_at_turn_start = len(player.melds)
         del self.discard_pile[discard_index:]
         player.hand = combined_pool
@@ -1044,7 +1072,7 @@ class RemiGameMatch:
         player.sort_hand()
 
         val_chosen = validate_meld(chosen_meld, wildcard_rank=self.wildcard_rank)
-        self.must_close_this_turn = (val_chosen.wildcards_as_substitute > 0)
+        self.must_close_this_turn = (had_seri_before_take or val_chosen.wildcards_as_substitute > 0)
         self.forbidden_discard_card_id = forbidden_id
         self.turn_taken_discard_card = target_card
         self.turn_taken_discarder_seat = self.card_discarder.get(target_card.id)
@@ -1436,9 +1464,9 @@ class RemiGameMatch:
                         f"({self._wildcard_value()}) = +{bonus} Poin (Total: +{meld_sum + bonus})!"
                     )
 
-                # PENALTI UMPAN TUTUP x10:
+                # PENALTI UMPAN TUTUP:
                 # Jika pemain yang tutup mengambil kartu buangan pada giliran ini,
-                # pemain yang membuang kartu tersebut mendapat penalti nilai kartu x 10!
+                # pemain yang membuang kartu tersebut mendapat penalti: Number card -50, Face card -100, As -150!
                 feeder_seat: Optional[int] = None
                 feeder_card: Optional[Card] = None
                 feed_penalty: int = 0
@@ -1446,11 +1474,10 @@ class RemiGameMatch:
                     if self.turn_taken_discarder_seat != seat:
                         feeder_seat = self.turn_taken_discarder_seat
                         feeder_card = self.turn_taken_discard_card
-                        feed_card_val = self._closing_card_value(feeder_card)
-                        feed_penalty = feed_card_val * 10
+                        feed_penalty = self._compute_feed_penalty(feeder_card)
                         feeder_name = self.players[feeder_seat].name
                         reason += (
-                            f" | PENALTI UMPAN TUTUP x10: {feeder_name} terkena -{feed_penalty} Poin "
+                            f" | PENALTI UMPAN TUTUP: {feeder_name} terkena -{feed_penalty} Poin "
                             f"karena membuang {feeder_card.id} yang dimakan untuk tutup!"
                         )
 
@@ -1491,15 +1518,29 @@ class RemiGameMatch:
     # ------------------------------------------------------------------
     # Perhitungan Skor Akhir Ronde & Aturan WAJIB KARTU URUT (SERI MIN 3)
     # ------------------------------------------------------------------
+    def _compute_feed_penalty(self, card: Card) -> int:
+        """Penalti umpan tutup: As = 150, Face card = 100, Number card / Joker = 50."""
+        if card.rank == "A":
+            return 150
+        elif card.rank in ("K", "Q", "J"):
+            return 100
+        else:
+            return 50
+
     def _closing_card_value(self, card: Card) -> int:
         """Nilai kartu buangan penutup (Angka=5, Face=10, As=15, Wild Card=25)."""
         return card.get_deadwood_penalty(self.wildcard_rank)
 
     def _wildcard_value(self) -> int:
-        """Nilai kelompok Wild Card ronde ini (dari kartu bukaan: Angka=5, Face=10, As=15)."""
-        if self.wildcard_rank and self.wildcard_rank != "JOKER":
-            return Card(id="X", rank=self.wildcard_rank, suit="S").base_points
-        return 0
+        """Nilai kelompok Wild Card: Number card & Wild Joker = 5 (x5), Face card = 10 (x10), As = 15 (x15)."""
+        if self.wildcard_rank:
+            if self.wildcard_rank == "A":
+                return 15
+            elif self.wildcard_rank in ("K", "Q", "J"):
+                return 10
+            else:
+                return 5
+        return 5
 
     def compute_tutup_biasa_bonus(self, closing_discard: Optional[Card]) -> int:
         """Bonus Tutup Biasa = nilai kartu buangan penutup x nilai Wild Card (contoh: K=10 x Wild angka=5 -> +50)."""

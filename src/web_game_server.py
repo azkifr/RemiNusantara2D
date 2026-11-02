@@ -47,6 +47,22 @@ def tick_game_state_locked():
     _LAST_TICK_TIME = now
     if dt <= 0.0:
         return
+
+    # Auto ganti pemain yang keluar / terputus (>25 detik tidak aktif) menjadi Bot di semua fase
+    for idx, p in enumerate(GAME.players):
+        if not p.is_bot and getattr(p, "player_id", ""):
+            if (now - getattr(p, "last_seen", now)) > 25.0:
+                p.is_bot = True
+                p.auto_pilot = True
+                p.player_id = ""
+                p.connected = True
+                bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                p.name = bot_names[idx % len(bot_names)]
+                if GAME.phase == "LOBBY":
+                    GAME.status_message = f"Kursi {idx + 1} dibuka kembali karena pemain terputus."
+                else:
+                    GAME.status_message = f"Pemain di Kursi {idx + 1} terputus dan otomatis digantikan oleh {p.name}."
+
     if getattr(GAME, "is_paused", False) or GAME.phase == "LOBBY":
         return
     if GAME.phase in ("TURN_DRAW", "TURN_MELD_DISCARD"):
@@ -134,13 +150,15 @@ HTML_PAGE = r"""<!DOCTYPE html>
     outline-offset: -4px;
     background: radial-gradient(ellipse at 50% 48%, var(--felt-center) 0%, var(--felt-mid) 52%, var(--felt-dark) 100%);
     display: grid;
-    grid-template-columns: minmax(190px, 230px) 1fr minmax(190px, 230px);
+    grid-template-columns: minmax(180px, 230px) 1fr minmax(180px, 230px);
     grid-template-rows: auto auto 1fr auto auto;
     gap: 4px 8px;
-    padding: 6px 10px;
+    padding: 6px 10px 8px 10px;
     position: relative;
+    min-height: 94vh;
     max-height: calc(100vh - 8px);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* TOP HEADER HUD */
@@ -586,6 +604,37 @@ HTML_PAGE = r"""<!DOCTYPE html>
     z-index: 5;
   }
 
+  /* BURIED MINI DISCARD CARDS */
+  #disc-cards .card.buried-mini {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 56px !important;
+    opacity: 0.72;
+    filter: brightness(0.85);
+    border-radius: 6px;
+    cursor: default;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transform: none !important;
+  }
+  #disc-cards .card.buried-mini:hover {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translateY(-3px) scale(1.08) !important;
+    z-index: 25;
+  }
+  #disc-cards .card.buried-mini .c-mini-top { font-size: 11px !important; }
+  #disc-cards .card.buried-mini .c-mini-center { font-size: 20px !important; }
+  #disc-cards .card.buried-mini .c-mini-bot { display: none; }
+  .disc-divider {
+    width: 2px;
+    height: 65%;
+    background: rgba(250, 204, 21, 0.45);
+    margin: 0 4px;
+    flex-shrink: 0;
+    align-self: center;
+    border-radius: 2px;
+  }
+
   /* ======================================================== */
   /* PLAYING CARD BASE DESIGN                                 */
   /* ======================================================== */
@@ -805,6 +854,24 @@ HTML_PAGE = r"""<!DOCTYPE html>
     opacity: 0.35;
     transform: scale(0.92);
   }
+  /* CARD DEALING ANIMATION */
+  @keyframes dealCardAnim {
+    0% {
+      opacity: 0;
+      transform: translateY(-220px) scale(0.35) rotate(12deg);
+    }
+    65% {
+      opacity: 1;
+      transform: translateY(10px) scale(1.04) rotate(-2deg);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1) rotate(0deg);
+    }
+  }
+  .hand-card-slot.deal-anim {
+    animation: dealCardAnim 0.5s cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  }
   .slot-slide-ctrls {
     position: absolute;
     top: -24px;
@@ -907,29 +974,34 @@ HTML_PAGE = r"""<!DOCTYPE html>
     justify-content: center;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    background: rgba(4, 20, 12, 0.94);
+    padding: 6px 12px;
+    background: rgba(4, 20, 12, 0.96);
     backdrop-filter: blur(14px);
-    border: 1px solid rgba(250, 204, 21, 0.35);
+    border: 1.5px solid rgba(250, 204, 21, 0.45);
     border-radius: 999px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15);
-    min-height: 40px;
-    max-height: 48px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.15);
+    min-height: 44px;
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     flex-shrink: 0;
-    z-index: 50;
+    z-index: 100;
+    position: relative;
     scrollbar-width: thin;
-    scrollbar-color: rgba(250, 204, 21, 0.35) transparent;
+    scrollbar-color: rgba(250, 204, 21, 0.5) transparent;
   }
-  @media (max-width: 1100px) {
+  @media (max-width: 1200px) {
     #action-bar {
       justify-content: flex-start;
       border-radius: 12px;
-      padding: 4px 6px;
+      padding: 4px 8px;
+    }
+    .btn-action {
+      height: 30px;
+      padding: 0 9px;
+      font-size: 10.5px;
     }
   }
   .btn-action {
@@ -1068,6 +1140,115 @@ HTML_PAGE = r"""<!DOCTYPE html>
     box-shadow: 0 10px 25px rgba(0,0,0,0.7), 0 0 15px rgba(250, 204, 21, 0.4);
     z-index: 999;
     display: none;
+  }
+
+  /* WINNER & NEXT ROUND MODAL */
+  #winner-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.88);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+  .winner-card {
+    background: linear-gradient(145deg, #0f172a, #032213);
+    border: 2px solid #facc15;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 520px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(250, 204, 21, 0.25);
+    animation: modalPop 0.35s cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  }
+  @keyframes modalPop {
+    0% { opacity: 0; transform: scale(0.85) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .winner-crown {
+    font-size: 50px;
+    line-height: 1;
+    margin-bottom: 6px;
+    animation: crownBounce 1.5s ease-in-out infinite;
+  }
+  @keyframes crownBounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-7px) rotate(4deg); }
+  }
+  .winner-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #fde047;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .winner-sub {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 16px;
+  }
+  .winner-hero {
+    background: rgba(250, 204, 21, 0.1);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .winner-hero-name {
+    font-size: 20px;
+    font-weight: 900;
+    color: #ffffff;
+  }
+  .winner-hero-score {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4ade80;
+    margin-top: 4px;
+  }
+  .standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+  }
+  .standings-table th {
+    background: rgba(255,255,255,0.06);
+    color: #94a3b8;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 700;
+  }
+  .standings-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    color: #e2e8f0;
+  }
+  .standings-table tr.winner-row td {
+    background: rgba(250, 204, 21, 0.12);
+    color: #fde047;
+    font-weight: 800;
+  }
+  .btn-next-round {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    border: 2px solid #4ade80;
+    color: white;
+    font-size: 15px;
+    font-weight: 900;
+    padding: 12px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(22, 163, 74, 0.45);
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+  .btn-next-round:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(74, 222, 128, 0.55);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
   }
 
   /* DASHBOARD PILLS */
@@ -1532,7 +1713,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       </div>
     </div>
     <div id="hdr-turn-banner" class="turn-banner turn-my">★ MEMUAT STATUS MEJA... ★</div>
-    <div id="hdr-status" class="status-notif">Selamat datang di Remi Nusantara 2D Royale!</div>
+    <div id="hdr-status" class="status-notif" style="display:none;"></div>
   </div>
 
   <!-- OPPONENT: TOP (Bot Siti) -->
@@ -1642,8 +1823,37 @@ HTML_PAGE = r"""<!DOCTYPE html>
 </div>
 
 <!-- ROUND COUNTDOWN OVERLAY -->
-<div id="round-countdown-overlay">
+<div id="round-countdown-overlay" style="display:none;">
   ⏳ Ronde berikutnya dimulai dalam: <span id="countdown-sec" style="font-size:18px;color:#fff;">5</span> detik...
+</div>
+
+<!-- WINNER & NEXT ROUND MODAL -->
+<div id="winner-modal">
+  <div class="winner-card">
+    <div class="winner-crown">👑</div>
+    <div id="winner-title" class="winner-title">RONDE SELESAI!</div>
+    <div id="winner-sub" class="winner-sub">Hasil perolehan poin ronde ini</div>
+    <div id="winner-hero" class="winner-hero">
+      <div id="winner-hero-name" class="winner-hero-name">Pemenang: -</div>
+      <div id="winner-hero-score" class="winner-hero-score">+0 Poin Ronde Ini</div>
+    </div>
+    <table class="standings-table">
+      <thead>
+        <tr>
+          <th>Pemain</th>
+          <th style="text-align:center;">Ronde Ini</th>
+          <th style="text-align:right;">Total Skor</th>
+        </tr>
+      </thead>
+      <tbody id="winner-table-body"></tbody>
+    </table>
+    <div id="winner-countdown-text" style="font-size:12px;color:#cbd5e1;margin-bottom:14px;">
+      ⏳ Ronde berikutnya otomatis dalam <span id="winner-countdown-sec" style="font-weight:900;color:#fde047;">5</span> detik...
+    </div>
+    <button id="btn-next-round-action" class="btn-next-round" onclick="nextRoundNow()">
+      ▶️ LANJUT KE RONDE BERIKUTNYA
+    </button>
+  </div>
 </div>
 
 <!-- PAUSE MODAL -->
@@ -1766,6 +1976,7 @@ let currentDrag = null;
 let initialClaimDone = false;
 let lastHandSig = '';
 let lastDiscSig = '';
+let lastAnimatedRound = -1;
 
 const SUIT_ICON = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
 
@@ -1780,7 +1991,7 @@ let currentConfig = {
 function groupBadge(c) {
   if (c.rank === 'JOKER' || c.is_wild) return 'WILD';
   if (c.rank === 'A') return '+15';
-  if (['K','Q','J','10'].includes(c.rank)) return '+10';
+  if (['K','Q','J'].includes(c.rank)) return '+10';
   return '+5';
 }
 
@@ -2007,50 +2218,80 @@ function updateUI(st) {
     }
   }
 
-  const countdownOverlay = document.getElementById('round-countdown-overlay');
-  if (countdownOverlay) {
-    if (st.phase === 'ROUND_OVER' && st.round_over_timer !== undefined && st.round_over_timer !== null) {
-      countdownOverlay.style.display = 'block';
-      const secLeft = Math.max(0, Math.ceil(st.round_over_timer));
-      document.getElementById('countdown-sec').textContent = secLeft;
-    } else {
-      countdownOverlay.style.display = 'none';
-    }
-  }
+  // Render Winner & Next Round Modal saat Ronde / Game Berakhir
+  const winnerModal = document.getElementById('winner-modal');
+  if (winnerModal) {
+    if (st.phase === 'ROUND_OVER' || st.phase === 'MATCH_OVER' || st.phase === 'GAME_OVER') {
+      winnerModal.style.display = 'flex';
+      const isMatchOver = (st.phase === 'MATCH_OVER' || st.phase === 'GAME_OVER');
+      
+      const titleEl = document.getElementById('winner-title');
+      const subEl = document.getElementById('winner-sub');
+      const heroNameEl = document.getElementById('winner-hero-name');
+      const heroScoreEl = document.getElementById('winner-hero-score');
+      const tbodyEl = document.getElementById('winner-table-body');
+      const countEl = document.getElementById('winner-countdown-sec');
+      const countTextEl = document.getElementById('winner-countdown-text');
+      const btnNext = document.getElementById('btn-next-round-action');
 
-  if (bannerEl) {
-    if (isPaused) {
-      bannerEl.className = 'turn-banner turn-opp';
-      bannerEl.textContent = '⏸️ PERMAINAN DIHENTIKAN SEMENTARA (PAUSED) - TEKAN ESC UNTUK LANJUT ⏸️';
-    } else if (st.phase === 'GAME_OVER' || st.phase === 'MATCH_OVER') {
-      bannerEl.className = 'turn-banner turn-my';
-      bannerEl.textContent = '🏆 PERMAINAN SELESAI! PEMENANG TARGET SKOR TELAH DITENTUKAN! 🏆';
-    } else if (st.phase === 'ROUND_OVER') {
-      bannerEl.className = 'turn-banner turn-opp';
-      bannerEl.textContent = '🏁 RONDE SELESAI! Mempersiapkan ronde berikutnya...';
-    } else if (isMyTurn) {
-      bannerEl.className = 'turn-banner turn-my';
-      if (st.phase === 'TURN_DRAW') {
-        bannerEl.textContent = '★ GILIRAN ANDA! [TAHAP 1: AMBIL KARTU] -> Klik PAK KARTU atau Buangan #1-#7 ★';
+      if (titleEl) titleEl.textContent = isMatchOver ? '🏆 JUARA REMI NUSANTARA! 🏆' : `🏁 RONDE ${st.round_number} SELESAI!`;
+      if (subEl) subEl.textContent = isMatchOver ? 'Target skor tercapai! Pertandingan berakhir.' : `Hasil perolehan poin ronde ke-${st.round_number}`;
+
+      // Tentukan pemenang ronde / match
+      let winnerPlayer = null;
+      if (isMatchOver && st.match_winner_seat !== null && st.players[st.match_winner_seat]) {
+        winnerPlayer = st.players[st.match_winner_seat];
+      } else if (st.round_closer_seat !== null && st.players[st.round_closer_seat]) {
+        winnerPlayer = st.players[st.round_closer_seat];
       } else {
-        if (canTutup) {
-          bannerEl.textContent = `★ GILIRAN ANDA! KARTU JADI LENGKAP! KLIK 'TUTUP TANGAN +250 (T)' (Buang ${tutupCardId})! ★`;
-        } else if (canCloseRound) {
-          bannerEl.textContent = `★ GILIRAN ANDA! SIAP MENUTUP KARTU (TUTUP BIASA)! Buang ${closeCardId} atau Klik 'TUTUP KARTU (T)'! ★`;
-        } else {
-          bannerEl.textContent = "★ GILIRAN ANDA! [TAHAP 2: SUSUN / BUANG] -> Klik 'AUTO TURUN (A)', 'TURUNKAN (M)', atau 'BUANG (B)' ★";
-        }
+        let best = -99999;
+        (st.players || []).forEach(p => {
+          if (p.last_round_score > best) {
+            best = p.last_round_score;
+            winnerPlayer = p;
+          }
+        });
+      }
+
+      if (heroNameEl && winnerPlayer) {
+        const tutupTag = st.round_closed_by_tutup_tangan ? ' 🌟 TUTUP TANGAN (+250)' : ' 🏆 PENUTUP KARTU';
+        heroNameEl.innerHTML = `👑 ${winnerPlayer.name} ${tutupTag}`;
+      }
+      if (heroScoreEl && winnerPlayer) {
+        heroScoreEl.textContent = `+${winnerPlayer.last_round_score || 0} Poin Ronde Ini (Total: ${winnerPlayer.total_score || 0} Poin)`;
+      }
+
+      if (tbodyEl && st.players) {
+        tbodyEl.innerHTML = st.players.map(p => {
+          const isW = winnerPlayer && p.seat === winnerPlayer.seat;
+          const rScore = p.last_round_score || 0;
+          const scoreClass = rScore > 0 ? 'color:#4ade80;' : (rScore < 0 ? 'color:#f87171;' : 'color:#94a3b8;');
+          const scoreText = rScore > 0 ? `+${rScore}` : `${rScore}`;
+          const burnTag = p.burned_last_round ? ' <span style="color:#f87171;font-size:10px;">🔥TERBAKAR</span>' : '';
+          return `<tr class="${isW ? 'winner-row' : ''}">
+            <td>${isW ? '👑 ' : ''}${p.name}${burnTag}</td>
+            <td style="text-align:center;font-weight:700;${scoreClass}">${scoreText}</td>
+            <td style="text-align:right;font-weight:800;">${p.total_score}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      if (st.round_over_timer !== undefined && st.round_over_timer !== null && st.round_over_timer > 0) {
+        if (countTextEl) countTextEl.style.display = 'block';
+        if (countEl) countEl.textContent = Math.ceil(st.round_over_timer);
+      } else {
+        if (countTextEl) countTextEl.style.display = 'none';
+      }
+
+      if (btnNext) {
+        btnNext.textContent = isMatchOver ? '🔄 MAIN LAGI / RESET MATCH' : '▶️ LANJUT KE RONDE BERIKUTNYA';
       }
     } else {
-      bannerEl.className = 'turn-banner turn-opp';
-      const currP = (st.players && st.players[st.current_turn_seat]) ? st.players[st.current_turn_seat] : null;
-      const currName = currP ? currP.name : `Pemain ${st.current_turn_seat + 1}`;
-      bannerEl.textContent = `Giliran ${currName} sedang berjalan... Harap tunggu.`;
+      winnerModal.style.display = 'none';
     }
   }
 
-  const notifEl = document.getElementById('hdr-status');
-  if (notifEl && (st.last_event || st.status_message)) notifEl.textContent = st.last_event || st.status_message;
+  // Notifikasi teks atas (#hdr-status) disembunyikan sesuai permintaan untuk menjaga kerahasiaan kartu yang diambil pemain lain
 
   const deckCount = (st.deck_count !== undefined) ? st.deck_count : (st.draw_pile_count || 0);
   const discards = st.discards || st.discard_pile || [];
@@ -2067,38 +2308,58 @@ function updateUI(st) {
 
   // Render Wild Card Slot
   const wildSlot = document.getElementById('wild-card-slot');
+  const wildTitleEl = document.getElementById('wild-title');
   if (wildSlot && wildCard) {
     wildSlot.innerHTML = renderCardHTML(wildCard);
+    if (wildTitleEl) {
+      const mult = st.wildcard_multiplier || 5;
+      wildTitleEl.textContent = `BUKAAN WILD (x${mult})`;
+    }
   }
 
-  // Render Discard Rail (Maksimal 7 Kartu Teratas & Otomatis Jadi!)
+  // Render Discard Rail (7 Teratas Aktif + Kartu Lama Versi Kecil & Otomatis Jadi!)
   const discContainer = document.getElementById('disc-cards');
   const discTitleEl = document.getElementById('disc-title');
   if (discContainer) {
     if (!discards || !discards.length) {
-      if (discTitleEl) discTitleEl.textContent = 'TUMPUKAN BUANGAN (Maksimal 7 Teratas & Otomatis Jadi):';
+      if (discTitleEl) discTitleEl.textContent = 'TUMPUKAN BUANGAN (7 Teratas Aktif & Otomatis Jadi):';
       discContainer.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;padding:4px;">(Tumpukan buangan masih kosong)</div>';
       lastDiscSig = '';
     } else {
       const totalDisc = discards.length;
       const MAX_DISC = 7;
       const startIdx = Math.max(0, totalDisc - MAX_DISC);
+      const buriedDiscards = discards.slice(0, startIdx);
       const top7Discards = discards.slice(startIdx);
       const buriedCount = startIdx;
 
       if (discTitleEl) {
         if (buriedCount > 0) {
-          discTitleEl.innerHTML = `TUMPUKAN BUANGAN (Menampilkan 7 Teratas & Otomatis Jadi — <span style="color:#cbd5e1;font-weight:600;">${buriedCount} Kartu Terkubur</span>)`;
+          discTitleEl.innerHTML = `TUMPUKAN BUANGAN (<span style="color:#fde047;">7 Teratas Aktif</span> & Otomatis Jadi | <span style="color:#94a3b8;font-size:10px;">${buriedCount} Kartu Lama (Versi Kecil)</span>):`;
         } else {
           discTitleEl.textContent = `TUMPUKAN BUANGAN (Total: ${totalDisc} Kartu — Ambil #1-#${totalDisc} & Otomatis Jadi):`;
         }
       }
 
-      const discSig = top7Discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
+      const discSig = discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
       if (discSig !== lastDiscSig) {
         lastDiscSig = discSig;
         const count = top7Discards.length;
-        discContainer.innerHTML = top7Discards.map((c, i) => {
+
+        // 1. Buried discards (versi kecil)
+        let buriedHtml = '';
+        if (buriedDiscards.length > 0) {
+          buriedHtml = buriedDiscards.map(c => {
+            return renderCardHTML(c, {
+              small: true,
+              locked: true,
+              hint: `Kartu buangan lama (${c.rank}${c.suit}) - terkubur di bawah 7 kartu teratas`
+            }).replace('class="card', 'class="card buried-mini');
+          }).join('') + '<div class="disc-divider" title="Batas 7 Kartu Buangan Teratas"></div>';
+        }
+
+        // 2. Top 7 discards (ukuran normal aktif)
+        const topHtml = top7Discards.map((c, i) => {
           const actualIndex = startIdx + i;
           const revIdx = count - 1 - i; // 0 is newest (rightmost, AMBIL #1)
           const sliceToRight = top7Discards.slice(i);
@@ -2118,6 +2379,9 @@ function updateUI(st) {
               : `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
           });
         }).join('');
+
+        discContainer.innerHTML = buriedHtml + topHtml;
+        discContainer.scrollLeft = discContainer.scrollWidth;
       }
     }
   }
@@ -2212,13 +2476,19 @@ function updateUI(st) {
           p0.hand = [...localHand];
         }
       }
+      let isNewRound = false;
+      if (st.round_number && st.round_number !== lastAnimatedRound && (st.phase === 'TURN_DRAW' || st.phase === 'TURN_MELD_DISCARD')) {
+        lastAnimatedRound = st.round_number;
+        isNewRound = true;
+        lastHandSig = '';
+      }
       const handIds = (p0.hand || []).map(c => c.id).join(',');
       const selIds = Array.from(selectedCards).sort().join(',');
-      const handSig = `${handIds}|${selIds}|${isMyTurn}|${st.phase}|${st.forbidden_discard_card_id || ''}`;
+      const handSig = `${handIds}|${selIds}|${isMyTurn}|${st.phase}|${st.forbidden_discard_card_id || ''}|round_${st.round_number}`;
       
       if (handSig !== lastHandSig) {
         lastHandSig = handSig;
-        myHandEl.innerHTML = (p0.hand || []).map(c => {
+        myHandEl.innerHTML = (p0.hand || []).map((c, i) => {
           const isSel = selectedCards.has(c.id);
           const isForbiddenDiscard = Boolean(st.forbidden_discard_card_id && st.forbidden_discard_card_id === c.id);
           const cardHtml = renderCardHTML(c, {
@@ -2229,7 +2499,10 @@ function updateUI(st) {
               <button class="slot-arrow-btn" onclick="event.stopPropagation(); slideCardById('${c.id}', -1);" title="Geser Kiri (Shift Left)">◀</button>
               <button class="slot-arrow-btn" onclick="event.stopPropagation(); slideCardById('${c.id}', 1);" title="Geser Kanan (Shift Right)">▶</button>
             </div>` : '';
-          return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''}"
+          const animClass = isNewRound ? 'deal-anim' : '';
+          const animDelayStyle = isNewRound ? `style="animation-delay: ${(i * 0.06).toFixed(2)}s;"` : '';
+          return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''} ${animClass}"
+                       ${animDelayStyle}
                        data-card-id="${c.id}"
                        draggable="true"
                        ondragstart="onHandCardDragStart(event, '${c.id}')"
@@ -2900,6 +3173,13 @@ async function leaveTableDuringGame() {
   }
 }
 
+async function nextRoundNow() {
+  const modal = document.getElementById('winner-modal');
+  if (modal) modal.style.display = 'none';
+  const isMatchOver = latestState && (latestState.phase === 'MATCH_OVER' || latestState.phase === 'GAME_OVER');
+  await sendAction(isMatchOver ? 'START_GAME' : 'START_ROUND');
+}
+
 function spectateGame() {
   spectatorMode = true;
   const lobbyScreen = document.getElementById('lobby-screen');
@@ -3148,6 +3428,7 @@ def _format_state_dict(seat: Optional[int]) -> dict:
     st["deck_count"] = st.get("draw_pile_count", 0)
     st["discards"] = st.get("discard_pile", [])
     st["wildcard_card"] = st.get("wildcard_indicator", None)
+    st["wildcard_multiplier"] = GAME._wildcard_value()
     st["last_event"] = st.get("status_message", "")
     st["leader_seat"] = st.get("highest_score_seat", 0)
     return st
@@ -3178,9 +3459,21 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                                 p.is_bot = True
                                 p.auto_pilot = True
                                 p.player_id = ""
+                                p.connected = True
                                 bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
                                 p.name = bot_names[idx % len(bot_names)]
                                 GAME.status_message = f"Kursi {idx + 1} dibuka kembali karena pemain terputus."
+                else:
+                    for idx, p in enumerate(GAME.players):
+                        if not p.is_bot and getattr(p, "player_id", ""):
+                            if (now - getattr(p, "last_seen", now)) > 25.0:
+                                p.is_bot = True
+                                p.auto_pilot = True
+                                p.player_id = ""
+                                p.connected = True
+                                bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                                p.name = bot_names[idx % len(bot_names)]
+                                GAME.status_message = f"Pemain di Kursi {idx + 1} terputus dan otomatis digantikan oleh {p.name}."
 
                 tick_game_state_locked()
                 st = _format_state_dict(seat)
@@ -3231,6 +3524,15 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                             p.name = bot_names[idx % len(bot_names)]
                     GAME.start_new_round()
                     GAME.status_message = f"Permainan dimulai! Ronde {GAME.round_number} aktif."
+                elif GAME.phase == "ROUND_OVER":
+                    GAME.round_over_timer = None
+                    GAME.start_new_round()
+                    GAME.status_message = f"Ronde {GAME.round_number} dimulai!"
+                elif GAME.phase in ("MATCH_OVER", "GAME_OVER"):
+                    GAME.round_over_timer = None
+                    GAME.reset_match()
+                    GAME.start_new_round()
+                    GAME.status_message = f"Pertandingan baru dimulai! Ronde {GAME.round_number} aktif."
                 self._send_json({"success": True, "state": _format_state_dict(seat)})
                 return
             elif action in ("RESET_TO_LOBBY", "TO_LOBBY"):
@@ -3284,15 +3586,14 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                 seat_idx = int(payload.get("seat", seat))
                 if 0 <= seat_idx < len(GAME.players):
                     target_p = GAME.players[seat_idx]
-                    target_pid = getattr(target_p, "player_id", "")
-                    if target_pid == player_id or not target_p.is_bot or not target_pid:
-                        old_name = target_p.name
-                        target_p.is_bot = True
-                        target_p.auto_pilot = True
-                        target_p.player_id = ""
-                        bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
-                        target_p.name = bot_names[seat_idx % len(bot_names)]
-                        GAME.status_message = f"{old_name} meninggalkan Kursi {seat_idx + 1}."
+                    old_name = target_p.name
+                    target_p.is_bot = True
+                    target_p.auto_pilot = True
+                    target_p.player_id = ""
+                    target_p.connected = True
+                    bot_names = ["Bot Siti", "Bot Budi", "Bot Agus", "Bot Joko"]
+                    target_p.name = bot_names[seat_idx % len(bot_names)]
+                    GAME.status_message = f"{old_name} meninggalkan Kursi {seat_idx + 1} dan digantikan Bot."
                 self._send_json({"success": True, "state": _format_state_dict(None)})
                 return
             elif action == "SET_BOT":

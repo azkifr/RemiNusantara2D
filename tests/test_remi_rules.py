@@ -138,9 +138,9 @@ def test_feature_2_reverted_auto_meld_and_tutup_tangan_250():
     p0.hand = [
         Card.from_id("8H"),
         Card.from_id("9H"),
-        Card.from_id("JD"),
-        Card.from_id("QD"),
-        Card.from_id("KD"),
+        Card.from_id("4D"),
+        Card.from_id("6D"),
+        Card.from_id("8S"),
         Card.from_id("AS"),
         Card.from_id("AC"),
     ]
@@ -151,6 +151,7 @@ def test_feature_2_reverted_auto_meld_and_tutup_tangan_250():
     assert len(p0.melds) == 1, "Ambil kartu buangan harus otomatis langsung menurunkan Kartu Jadi ke meja!"
 
     # 2. Uji tombol AUTO TURUN (auto_meld_all_valid) menurunkan JD-QD-KD dari tangan
+    p0.hand.extend([Card.from_id("JD"), Card.from_id("QD"), Card.from_id("KD")])
     ok_auto, _ = game.auto_meld_all_valid(0)
     assert ok_auto
     assert len(p0.melds) == 2
@@ -355,10 +356,15 @@ def test_feeder_penalty_x10_when_discard_is_taken_to_close():
     assert ok_close, msg_close
     assert game.phase == "ROUND_OVER"
 
-    # Pemain 0 (Feeder) harus terkena penalti kartu 5 x 10 = 50 poin (-50)!
+    # Pemain 0 (Feeder) harus terkena penalti kartu 5S (kartu angka) = 50 poin (-50)!
     assert p0.last_round_breakdown["feed_penalty"] == 50, p0.last_round_breakdown
-    assert "PENALTI UMPAN TUTUP x10" in game.status_message
-    print("[PASS] Penalti umpan tutup x10 (pemain yang membuang kartu yang dimakan untuk tutup terkena penalti nilai kartu x 10)")
+    assert "PENALTI UMPAN TUTUP" in game.status_message
+    assert game._compute_feed_penalty(Card.from_id("5S")) == 50
+    assert game._compute_feed_penalty(Card.from_id("JH")) == 100
+    assert game._compute_feed_penalty(Card.from_id("QC")) == 100
+    assert game._compute_feed_penalty(Card.from_id("KD")) == 100
+    assert game._compute_feed_penalty(Card.from_id("AS")) == 150
+    print("[PASS] Penalti umpan tutup (-50 Angka, -100 Gambar, -150 As)")
 
 
 def test_drag_and_drop_reorder_hand():
@@ -736,10 +742,8 @@ def test_discarded_wildcards_cannot_be_taken_by_other_players():
     p0.hand = [
         Card.from_id("3D"),
         Card.from_id("4D"),
-        Card.from_id("5D"),
         Card.from_id("10H"),
         Card.from_id("JH"),
-        Card.from_id("QH"),
         Card.from_id("2C"),
     ]
 
