@@ -32,6 +32,8 @@ def get_local_ip() -> str:
 
 GAME_LOCK = threading.Lock()
 GAME = RemiGameMatch(room_code="RM1500", num_players=4, turn_timer_sec=30)
+for p in GAME.players:
+    p.player_id = ""
 # Server dimulai dalam fase LOBBY agar pemain dapat berkumpul, memilih kursi, dan mengatur nama
 _LAST_TICK_TIME = time.time()
 _BOT_ACCUM = 0.0
@@ -904,22 +906,36 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 7px;
-    padding: 4px 12px;
+    gap: 6px;
+    padding: 4px 10px;
     background: rgba(4, 20, 12, 0.94);
     backdrop-filter: blur(14px);
     border: 1px solid rgba(250, 204, 21, 0.35);
     border-radius: 999px;
     box-shadow: 0 4px 18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.15);
     min-height: 40px;
-    max-height: 44px;
+    max-height: 48px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
     flex-shrink: 0;
     z-index: 50;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(250, 204, 21, 0.35) transparent;
+  }
+  @media (max-width: 1100px) {
+    #action-bar {
+      justify-content: flex-start;
+      border-radius: 12px;
+      padding: 4px 6px;
+    }
   }
   .btn-action {
     height: 32px;
-    padding: 0 13px;
-    font-size: 11.5px;
+    padding: 0 11px;
+    font-size: 11px;
     font-weight: 800;
     border-radius: 999px;
     border: 1px solid transparent;
@@ -932,6 +948,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     transition: all 0.14s ease;
     white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    flex-shrink: 0;
   }
   .btn-action:hover {
     transform: translateY(-2px);
@@ -1497,8 +1514,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <span id="hdr-title" class="header-title">REMI NUSANTARA 2D</span>
       </div>
       <div class="header-btn-group">
-        <button id="btn-to-lobby" onclick="returnToLobby()" class="header-dash-btn" style="background: rgba(239, 68, 68, 0.2); border-color: #f87171; color: #fca5a5;" title="Kembali ke Ruang Lobby">
+        <button id="btn-to-lobby" onclick="returnToLobby()" class="header-dash-btn" style="background: rgba(239, 68, 68, 0.2); border-color: #f87171; color: #fca5a5;" title="Kembali ke Ruang Lobby (Reset Room)">
           🏠 LOBBY
+        </button>
+        <button id="btn-leave-table" onclick="leaveTableDuringGame()" class="header-dash-btn" style="background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fde047;" title="Tinggalkan kursi Anda dan kembali ke Lobby (digantikan Bot)">
+          🚪 KELUAR MEJA
         </button>
         <button id="btn-invite" onclick="openInviteModal()" class="header-dash-btn" title="Undang teman bermain via Link atau Room Code">
           👥 UNDANG TEMAN
@@ -1865,7 +1885,24 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
 function updateUI(st) {
   latestState = st;
 
-  // Sinkronisasi status kepemilikan kursi dengan server (cegah duplicate seat & race condition)
+  // 1. Klaim Kursi Awal: jalankan klaim segera jika kursi ditentukan di URL / session, atau jika meja kosong (pengunjung pertama menjadi Host)
+  if (!initialClaimDone) {
+    initialClaimDone = true;
+    if (mySeat === null && !spectatorMode && st.players && st.players.length > 0) {
+      const isAnyHuman = st.players.some(p => !p.is_bot && p.player_id);
+      if (!isAnyHuman) {
+        mySeat = 0; // Pengunjung pertama otomatis menjadi Host (Kursi 1)
+      }
+    }
+    if (mySeat !== null && st.players && st.players[mySeat]) {
+      const curP = st.players[mySeat];
+      if (curP.is_bot || !curP.player_id || curP.player_id === myPlayerId) {
+        claimSeat(mySeat);
+      }
+    }
+  }
+
+  // 2. Sinkronisasi status kepemilikan kursi dengan server (cegah duplicate seat & race condition)
   if (st.players) {
     const myOwnedSeat = st.players.findIndex(p => !p.is_bot && p.player_id && p.player_id === myPlayerId);
     if (myOwnedSeat >= 0) {
@@ -1876,22 +1913,16 @@ function updateUI(st) {
         url.searchParams.set('seat', myOwnedSeat);
         window.history.replaceState({}, '', url);
       }
-    } else if (mySeat !== null) {
+    } else if (mySeat !== null && initialClaimDone) {
       const curP = st.players[mySeat];
-      if (!curP || curP.is_bot || (curP.player_id && curP.player_id !== myPlayerId)) {
+      // Hanya lepas mySeat jika ada pemain manusia lain yang secara aktif memegang kursi ini
+      if (curP && !curP.is_bot && curP.player_id && curP.player_id !== myPlayerId) {
         mySeat = null;
         sessionStorage.removeItem('remi_my_seat');
         const url = new URL(window.location);
         url.searchParams.delete('seat');
         window.history.replaceState({}, '', url);
       }
-    }
-  }
-
-  if (!initialClaimDone) {
-    initialClaimDone = true;
-    if (mySeat !== null && st.players && st.players[mySeat] && st.players[mySeat].is_bot) {
-      claimSeat(mySeat);
     }
   }
 
@@ -2122,7 +2153,7 @@ function updateUI(st) {
 
     const actBar = document.getElementById('action-bar');
     if (actBar) {
-      actBar.style.display = (mySeat === null) ? 'none' : 'flex';
+      actBar.style.display = 'flex';
     }
 
     const myTurnBadge = document.getElementById('my-turn-badge');
@@ -2848,6 +2879,27 @@ async function toggleSeatBot(idx, isBot) {
   showToast(isBot ? `Kursi ${idx + 1} diatur sebagai Bot.` : `Kursi ${idx + 1} dibuka untuk pemain lain.`);
 }
 
+async function kickSeat(idx) {
+  if (confirm(`Kosongkan Kursi ${idx + 1} dan jadikan Bot?`)) {
+    await sendAction('SET_BOT', { seat: idx, is_bot: true });
+    showToast(`Kursi ${idx + 1} berhasil dikosongkan.`);
+  }
+}
+
+async function leaveTableDuringGame() {
+  if (confirm("Tinggalkan meja permainan? Kursi Anda akan digantikan oleh Bot dan Anda kembali ke Lobby.")) {
+    if (mySeat !== null) {
+      await leaveSeat(mySeat);
+    }
+    spectatorMode = false;
+    sessionStorage.removeItem('remi_my_seat');
+    const url = new URL(window.location);
+    url.searchParams.delete('seat');
+    window.history.replaceState({}, '', url);
+    window.location.reload();
+  }
+}
+
 function spectateGame() {
   spectatorMode = true;
   const lobbyScreen = document.getElementById('lobby-screen');
@@ -2955,10 +3007,11 @@ function renderLobby(st) {
   const gridEl = document.getElementById('lobby-seats-grid');
   if (gridEl) {
     gridEl.innerHTML = players.map(p => {
-      const isMe = (p.player_id && p.player_id === myPlayerId) || (mySeat === p.seat && !p.is_bot && (!p.player_id || p.player_id === myPlayerId));
+      const isMe = (p.player_id && p.player_id === myPlayerId) || (mySeat === p.seat);
       const isBot = Boolean(p.is_bot);
       const isHost = (p.seat === 0);
-      const isOtherHuman = (!isBot && !isMe);
+      const isOtherHuman = (!isBot && Boolean(p.player_id) && p.player_id !== myPlayerId);
+      const isOpen = isBot || !p.player_id;
 
       let cardClass = 'seat-card';
       if (isMe) cardClass += ' seat-me';
@@ -2969,8 +3022,10 @@ function renderLobby(st) {
         statusBadge = '<span class="seat-badge seat-badge-me">★ ANDA ★</span>';
       } else if (isOtherHuman) {
         statusBadge = '<span class="seat-badge seat-badge-human">MANUSIA</span>';
-      } else {
+      } else if (isBot) {
         statusBadge = '<span class="seat-badge seat-badge-bot">BOT AI</span>';
+      } else {
+        statusBadge = '<span class="seat-badge seat-badge-bot" style="color:#4ade80;">TERSEDIA</span>';
       }
 
       let avatar = '👤';
@@ -2984,18 +3039,22 @@ function renderLobby(st) {
       } else if (isOtherHuman) {
         mainBtn = `<button class="lobby-btn" disabled style="background:rgba(255,255,255,0.08);color:#94a3b8;cursor:not-allowed;border:1px solid rgba(255,255,255,0.15);">🔒 TERISI (${p.name})</button>`;
       } else if (mySeat === null) {
-        mainBtn = `<button class="lobby-btn btn-claim" onclick="claimSeat(${p.seat})">🪑 DUDUK DI SINI</button>`;
+        mainBtn = `<button class="lobby-btn btn-claim" onclick="claimSeat(${p.seat})">🪑 DUDUK DI SINI ${isHost ? '(Host)' : ''}</button>`;
       } else {
-        mainBtn = `<button class="lobby-btn btn-switch" onclick="claimSeat(${p.seat})">🔄 PINDAH KE SINI</button>`;
+        mainBtn = `<button class="lobby-btn btn-switch" onclick="claimSeat(${p.seat})">🔄 PINDAH KE SINI ${isHost ? '(Host)' : ''}</button>`;
       }
 
       let subActionBtn = '';
-      if (isBot) {
+      if (isMe) {
+        subActionBtn = `<button class="seat-sub-btn" onclick="leaveSeat(${p.seat})" style="color:#f87171;">🚪 Tinggalkan Kursi</button>`;
+      } else if (isBot) {
         subActionBtn = `<button class="seat-sub-btn" onclick="toggleSeatBot(${p.seat}, false)">👤 Buka untuk Teman</button>`;
-      } else if (isMe) {
-        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.8;color:#4ade80;cursor:default;">Kursi Anda</span>`;
+      } else if (isOpen) {
+        subActionBtn = `<span class="seat-sub-btn" style="color:#4ade80;cursor:default;">Tersedia (Bebas)</span>`;
+      } else if (mySeat === 0) {
+        subActionBtn = `<button class="seat-sub-btn" onclick="kickSeat(${p.seat})" style="color:#fb923c;">⚠️ Kosongkan / Jadikan Bot</button>`;
       } else {
-        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.6;cursor:default;">Ditempati</span>`;
+        subActionBtn = `<span class="seat-sub-btn" style="opacity:0.6;cursor:default;">Ditempati (${p.name})</span>`;
       }
 
       return `<div class="${cardClass}">
@@ -3115,7 +3174,7 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                 if GAME.phase == "LOBBY":
                     for idx, p in enumerate(GAME.players):
                         if not p.is_bot and getattr(p, "player_id", ""):
-                            if (now - getattr(p, "last_seen", now)) > 45.0:
+                            if (now - getattr(p, "last_seen", now)) > 25.0:
                                 p.is_bot = True
                                 p.auto_pilot = True
                                 p.player_id = ""
