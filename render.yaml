@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: remi-nusantara-2d
+    runtime: python
+    plan: free
+    buildCommand: ""
+    startCommand: python src/web_game_server.py

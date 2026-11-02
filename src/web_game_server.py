@@ -2218,4 +2218,9 @@ def run_web_server(port: int = 8080, open_browser: bool = True):
 
 
 if __name__ == "__main__":
-    run_web_server(port=8080, open_browser=True)
+    env_port = int(os.environ.get("PORT", "8080"))
+    is_cloud = any(
+        k in os.environ
+        for k in ("PORT", "RENDER", "RAILWAY_ENVIRONMENT", "CODESPACES", "DYNO", "KOYEB_SERVICE_NAME")
+    )
+    run_web_server(port=env_port, open_browser=not is_cloud)

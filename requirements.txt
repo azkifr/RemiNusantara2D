@@ -1,0 +1,1 @@
+# Remi Nusantara 2D uses Python 3 standard library only (zero external dependencies)
