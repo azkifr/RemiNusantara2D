@@ -530,12 +530,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex-wrap: nowrap !important;
     overflow-x: auto;
     overflow-y: hidden;
-    gap: 5px;
+    gap: 6px;
     align-items: center;
-    justify-content: center; /* Kartu berada di tengah rapi */
+    justify-content: flex-start; /* Kartu mengalir dari kiri ke kanan agar saat bertambah bisa digeser/scroll tanpa terpotong */
     width: 100%;
     flex: 1;
-    padding: 2px 4px 6px 4px;
+    padding: 2px 6px 6px 6px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+  }
+  #disc-cards:active {
+    cursor: grabbing;
   }
 
   /* DISCARD CARDS (MAX 7 TERATAS - AMBIL & AUTO JADI) */
@@ -783,6 +789,64 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
   #my-hand .hand-card-slot.selected-slot {
     z-index: 90 !important;
+  }
+  #my-hand .hand-card-slot.drop-target-slot {
+    transform: scale(1.08) translateY(-14px);
+    z-index: 85 !important;
+    filter: drop-shadow(0 0 12px #38bdf8);
+  }
+  #my-hand .hand-card-slot.drop-target-slot .card {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px #38bdf8, 0 14px 26px rgba(56, 189, 248, 0.6) !important;
+  }
+  #my-hand .hand-card-slot.dragging-slot {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  .slot-slide-ctrls {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 3px;
+    z-index: 100;
+    pointer-events: auto;
+  }
+  .slot-arrow-btn {
+    background: #f59e0b;
+    color: #0f172a;
+    border: 1px solid #fef08a;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 900;
+    width: 24px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    transition: transform 0.1s, background 0.1s;
+    padding: 0;
+    line-height: 1;
+  }
+  .slot-arrow-btn:hover {
+    background: #facc15;
+    transform: scale(1.15);
+  }
+  .slot-arrow-btn:active {
+    transform: scale(0.95);
+  }
+  .btn-action.btn-slide {
+    background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+    border-color: #38bdf8;
+    color: #f0f9ff;
+  }
+  .btn-action.btn-slide:hover {
+    background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+    border-color: #7dd3fc;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
   }
 
   /* ======================================================== */
@@ -1548,6 +1612,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <button class="btn-action btn-sort" onclick="sendAction('SORT_SUIT')" title="Urutkan kartu tangan berdasarkan Kembang / Warna (F)">
       ♠️ URUT KEMBANG (F)
     </button>
+    <button class="btn-action btn-slide" onclick="slideSelectedCard(-1)" title="Geser kartu yang dipilih ke Kiri ([)">
+      ◀ GESER KIRI ([)
+    </button>
+    <button class="btn-action btn-slide" onclick="slideSelectedCard(1)" title="Geser kartu yang dipilih ke Kanan (])">
+      GESER KANAN (]) ▶
+    </button>
   </div>
 </div>
 
@@ -2104,6 +2174,13 @@ function updateUI(st) {
     // Render 50% Overlapping Hand with Caching (Zero Hover Jitter & HTML5 Drag)
     const myHandEl = document.getElementById('my-hand');
     if (myHandEl) {
+      if (Date.now() - lastLocalReorderTime < 800 && p0.hand && latestState && latestState.players && latestState.players[mySeat]) {
+        const localHand = latestState.players[mySeat].hand || [];
+        const serverHandIds = new Set((p0.hand || []).map(c => c.id));
+        if (localHand.length === p0.hand.length && localHand.every(c => serverHandIds.has(c.id))) {
+          p0.hand = [...localHand];
+        }
+      }
       const handIds = (p0.hand || []).map(c => c.id).join(',');
       const selIds = Array.from(selectedCards).sort().join(',');
       const handSig = `${handIds}|${selIds}|${isMyTurn}|${st.phase}|${st.forbidden_discard_card_id || ''}`;
@@ -2112,21 +2189,30 @@ function updateUI(st) {
         lastHandSig = handSig;
         myHandEl.innerHTML = (p0.hand || []).map(c => {
           const isSel = selectedCards.has(c.id);
-          const canDragDiscard = isMyTurn && (st.phase === 'TURN_MELD_DISCARD');
           const isForbiddenDiscard = Boolean(st.forbidden_discard_card_id && st.forbidden_discard_card_id === c.id);
           const cardHtml = renderCardHTML(c, {
             selected: isSel
           });
+          const slideCtrlsHtml = isSel ? `
+            <div class="slot-slide-ctrls">
+              <button class="slot-arrow-btn" onclick="event.stopPropagation(); slideCardById('${c.id}', -1);" title="Geser Kiri (Shift Left)">◀</button>
+              <button class="slot-arrow-btn" onclick="event.stopPropagation(); slideCardById('${c.id}', 1);" title="Geser Kanan (Shift Right)">▶</button>
+            </div>` : '';
           return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''}"
                        data-card-id="${c.id}"
-                       draggable="${canDragDiscard}"
+                       draggable="true"
                        ondragstart="onHandCardDragStart(event, '${c.id}')"
                        ondragend="onDragEndClean(event)"
                        ondragover="onHandSlotDragOver(event, '${c.id}')"
+                       ondragleave="onHandSlotDragLeave(event, '${c.id}')"
                        ondrop="onHandSlotDrop(event, '${c.id}')"
+                       ontouchstart="onHandTouchStart(event, '${c.id}')"
+                       ontouchmove="onHandTouchMove(event, '${c.id}')"
+                       ontouchend="onHandTouchEnd(event, '${c.id}')"
                        onclick="toggleCard('${c.id}')"
                        oncontextmenu="quickDiscard('${c.id}'); return false;"
-                       title="${isForbiddenDiscard ? 'Kartu baru diambil dari buangan teratas (tidak boleh langsung dibuang di giliran ini)' : 'Klik untuk pilih; Geser ke Buangan / Klik Kanan untuk Buang (B)'}">
+                       title="${isForbiddenDiscard ? 'Kartu baru diambil dari buangan teratas (tidak boleh langsung dibuang di giliran ini)' : 'Klik untuk pilih; Tarik / Tombol Panah untuk Geser Posisi; Klik Kanan / Tarik ke Buangan untuk Buang (B)'}">
+            ${slideCtrlsHtml}
             ${cardHtml}
           </div>`;
         }).join('');
@@ -2138,14 +2224,8 @@ function updateUI(st) {
 function toggleCard(cardId) {
   if (selectedCards.has(cardId)) selectedCards.delete(cardId);
   else selectedCards.add(cardId);
-  const slot = document.querySelector(`.hand-card-slot[data-card-id="${cardId}"]`);
-  if (slot) {
-    const isSel = selectedCards.has(cardId);
-    slot.classList.toggle('selected-slot', isSel);
-    const cardEl = slot.querySelector('.card');
-    if (cardEl) cardEl.classList.toggle('selected', isSel);
-  }
-  lastHandSig = ''; // Force sync on next poll
+  lastHandSig = '';
+  if (latestState) updateUI(latestState);
 }
 
 function quickDiscard(cardId) {
@@ -2243,7 +2323,56 @@ function togglePause() {
   sendAction('TOGGLE_PAUSE');
 }
 
-// Drag & Drop (dilengkapi proteksi anti-stuck & deteksi micro-drag agar klik tidak pernah gagal)
+// Drag & Drop (dilengkapi proteksi anti-stuck, reorder manual, & mobile touch gestures)
+let lastLocalReorderTime = 0;
+let touchDragState = null;
+
+function reorderHandLocally(sourceCardId, targetCardId) {
+  if (!latestState || !latestState.players || !latestState.players[mySeat]) return;
+  const hand = latestState.players[mySeat].hand || [];
+  const srcIdx = hand.findIndex(c => c.id === sourceCardId);
+  const tgtIdx = hand.findIndex(c => c.id === targetCardId);
+  if (srcIdx === -1 || tgtIdx === -1 || srcIdx === tgtIdx) return;
+
+  lastLocalReorderTime = Date.now();
+  const [removed] = hand.splice(srcIdx, 1);
+  hand.splice(tgtIdx, 0, removed);
+  lastHandSig = '';
+  updateUI(latestState);
+  sendAction('REORDER_HAND', { source_card_id: sourceCardId, target_card_id: targetCardId });
+}
+
+function slideSelectedCard(dir) {
+  if (!latestState || !latestState.players || !latestState.players[mySeat]) return;
+  const hand = latestState.players[mySeat].hand || [];
+  if (hand.length <= 1) return;
+
+  let targetCid = null;
+  for (const c of hand) {
+    if (selectedCards.has(c.id)) {
+      targetCid = c.id;
+      break;
+    }
+  }
+  if (!targetCid) {
+    targetCid = hand[hand.length - 1].id;
+    selectedCards.add(targetCid);
+  }
+  slideCardById(targetCid, dir);
+}
+
+function slideCardById(cardId, dir) {
+  if (!latestState || !latestState.players || !latestState.players[mySeat]) return;
+  const hand = latestState.players[mySeat].hand || [];
+  const idx = hand.findIndex(c => c.id === cardId);
+  if (idx === -1) return;
+  const targetIdx = idx + dir;
+  if (targetIdx < 0 || targetIdx >= hand.length) return;
+
+  const targetCardId = hand[targetIdx].id;
+  reorderHandLocally(cardId, targetCardId);
+}
+
 function onDragEndClean(e) {
   const dragInfo = currentDrag;
   currentDrag = null;
@@ -2251,6 +2380,9 @@ function onDragEndClean(e) {
   if (zb) { zb.classList.remove('drop-target-active'); zb.style.borderColor = ''; }
   const dr = document.getElementById('discard-rail');
   if (dr) { dr.classList.remove('drop-target-discard'); dr.style.borderColor = ''; }
+
+  document.querySelectorAll('.dragging-slot').forEach(el => el.classList.remove('dragging-slot'));
+  document.querySelectorAll('.drop-target-slot').forEach(el => el.classList.remove('drop-target-slot'));
 
   // Jika pengguna bermaksud klik namun mouse bergeser sedikit (< 35px) sehingga browser memicu dragstart:
   if (dragInfo && !dragInfo.handled && e) {
@@ -2277,8 +2409,10 @@ function onPakDragStart(e) {
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_DRAW');
   if (!isMyTurn) { e.preventDefault(); return; }
   currentDrag = { type: 'PAK', startX: e.clientX || 0, startY: e.clientY || 0, handled: false };
-  e.dataTransfer.setData('text/plain', 'PAK');
-  e.dataTransfer.effectAllowed = 'copy';
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('text/plain', 'PAK');
+    e.dataTransfer.effectAllowed = 'copy';
+  }
   const zb = document.getElementById('zone-bottom');
   if (zb) zb.classList.add('drop-target-active');
 }
@@ -2288,28 +2422,45 @@ function onDiscardDragStart(e, idx) {
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_DRAW');
   if (!isMyTurn) { e.preventDefault(); return; }
   currentDrag = { type: 'DISCARD', idx: idx, startX: e.clientX || 0, startY: e.clientY || 0, handled: false };
-  e.dataTransfer.setData('text/plain', 'DISCARD_' + idx);
-  e.dataTransfer.effectAllowed = 'copy';
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('text/plain', 'DISCARD_' + idx);
+    e.dataTransfer.effectAllowed = 'copy';
+  }
   const zb = document.getElementById('zone-bottom');
   if (zb) zb.classList.add('drop-target-active');
 }
 
 function onHandCardDragStart(e, cardId) {
   if (!latestState) return;
-  const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
-  if (!isMyTurn) { e.preventDefault(); return; }
   currentDrag = { type: 'HAND', cardId: cardId, startX: e.clientX || 0, startY: e.clientY || 0, handled: false };
-  e.dataTransfer.setData('text/plain', cardId);
-  e.dataTransfer.effectAllowed = 'move';
-  const dr = document.getElementById('discard-rail');
-  if (dr) dr.classList.add('drop-target-discard');
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('text/plain', cardId);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
+  if (isMyTurn) {
+    const dr = document.getElementById('discard-rail');
+    if (dr) dr.classList.add('drop-target-discard');
+  }
+  const slot = document.querySelector(`.hand-card-slot[data-card-id="${cardId}"]`);
+  if (slot) slot.classList.add('dragging-slot');
 }
 
 function onHandSlotDragOver(e, targetCardId) {
   if (currentDrag && currentDrag.type === 'HAND' && currentDrag.cardId !== targetCardId) {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    const slot = document.querySelector(`.hand-card-slot[data-card-id="${targetCardId}"]`);
+    if (slot && !slot.classList.contains('drop-target-slot')) {
+      document.querySelectorAll('.drop-target-slot').forEach(el => el.classList.remove('drop-target-slot'));
+      slot.classList.add('drop-target-slot');
+    }
   }
+}
+
+function onHandSlotDragLeave(e, targetCardId) {
+  const slot = document.querySelector(`.hand-card-slot[data-card-id="${targetCardId}"]`);
+  if (slot) slot.classList.remove('drop-target-slot');
 }
 
 function onHandSlotDrop(e, targetCardId) {
@@ -2319,17 +2470,19 @@ function onHandSlotDrop(e, targetCardId) {
     const srcId = currentDrag.cardId;
     currentDrag.handled = true;
     onDragEndClean(e);
-    lastHandSig = '';
-    sendAction('REORDER_HAND', { source_card_id: srcId, target_card_id: targetCardId });
+    reorderHandLocally(srcId, targetCardId);
   }
 }
 
 function onDiscardDragOver(e) {
   if (currentDrag && currentDrag.type === 'HAND') {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const dr = document.getElementById('discard-rail');
-    if (dr) dr.classList.add('drop-target-discard');
+    const isMyTurn = latestState && (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
+    if (isMyTurn) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      const dr = document.getElementById('discard-rail');
+      if (dr) dr.classList.add('drop-target-discard');
+    }
   }
 }
 
@@ -2343,21 +2496,101 @@ function onDiscardDrop(e) {
   if (dragInfo) dragInfo.handled = true;
   onDragEndClean(e);
   if (dragInfo && dragInfo.type === 'HAND') {
-    const cid = dragInfo.cardId;
-    selectedCards.clear();
-    lastHandSig = '';
-    lastDiscSig = '';
-    sendAction('DISCARD', { card_id: cid });
+    const isMyTurn = latestState && (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
+    if (isMyTurn) {
+      const cid = dragInfo.cardId;
+      selectedCards.clear();
+      lastHandSig = '';
+      lastDiscSig = '';
+      sendAction('DISCARD', { card_id: cid });
+    }
   }
 }
 
-function onHandDragOver(e) {
-  if (currentDrag && (currentDrag.type === 'PAK' || currentDrag.type === 'DISCARD')) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    const zb = document.getElementById('zone-bottom');
-    if (zb) zb.classList.add('drop-target-active');
+// Touch Event Handlers for Mobile (Drag/Swipe Cards on Touchscreen)
+function onHandTouchStart(e, cardId) {
+  if (!e.touches || e.touches.length === 0) return;
+  const t = e.touches[0];
+  touchDragState = {
+    cardId: cardId,
+    startX: t.clientX,
+    startY: t.clientY,
+    moved: false
+  };
+}
+
+function onHandTouchMove(e, cardId) {
+  if (!touchDragState || !e.touches || e.touches.length === 0) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchDragState.startX;
+  const dy = t.clientY - touchDragState.startY;
+  if (Math.hypot(dx, dy) > 12) {
+    touchDragState.moved = true;
+    const elem = document.elementFromPoint(t.clientX, t.clientY);
+    const targetSlot = elem ? elem.closest('.hand-card-slot') : null;
+    document.querySelectorAll('.drop-target-slot').forEach(el => el.classList.remove('drop-target-slot'));
+    if (targetSlot && targetSlot.getAttribute('data-card-id') !== touchDragState.cardId) {
+      targetSlot.classList.add('drop-target-slot');
+    }
   }
+}
+
+function onHandTouchEnd(e, cardId) {
+  if (!touchDragState) return;
+  const st = touchDragState;
+  touchDragState = null;
+  document.querySelectorAll('.drop-target-slot').forEach(el => el.classList.remove('drop-target-slot'));
+
+  if (st.moved && e.changedTouches && e.changedTouches.length > 0) {
+    const t = e.changedTouches[0];
+    const elem = document.elementFromPoint(t.clientX, t.clientY);
+
+    const discardRail = elem ? elem.closest('#discard-rail') : null;
+    const isMyTurn = latestState && (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
+    if (discardRail && isMyTurn) {
+      selectedCards.clear();
+      lastHandSig = '';
+      lastDiscSig = '';
+      sendAction('DISCARD', { card_id: st.cardId });
+      return;
+    }
+
+    const targetSlot = elem ? elem.closest('.hand-card-slot') : null;
+    if (targetSlot) {
+      const targetCid = targetSlot.getAttribute('data-card-id');
+      if (targetCid && targetCid !== st.cardId) {
+        reorderHandLocally(st.cardId, targetCid);
+      }
+    }
+  }
+}
+
+function enableDragScroll(el) {
+  if (!el) return;
+  let isDown = false;
+  let startX = 0;
+  let scrollLeft = 0;
+  el.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.card') || e.target.closest('.slot-slide-ctrls')) return;
+    isDown = true;
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  window.addEventListener('mouseup', () => { isDown = false; });
+  el.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    el.scrollLeft = scrollLeft - walk;
+  });
+}
+window.addEventListener('DOMContentLoaded', () => {
+  enableDragScroll(document.getElementById('disc-cards'));
+  enableDragScroll(document.getElementById('my-hand'));
+});
+enableDragScroll(document.getElementById('disc-cards'));
+enableDragScroll(document.getElementById('my-hand'));
 }
 
 function onHandDragLeave(e) {
@@ -2817,6 +3050,10 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'b' || e.key === 'B') discardSelected();
   else if (e.key === 's' || e.key === 'S') sendAction('SORT_RANK');
   else if (e.key === 'f' || e.key === 'F') sendAction('SORT_SUIT');
+  else if (e.key === '[' || e.key === '{') slideSelectedCard(-1);
+  else if (e.key === ']' || e.key === '}') slideSelectedCard(1);
+  else if (e.key === 'ArrowLeft' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(-1); }
+  else if (e.key === 'ArrowRight' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(1); }
 });
 
 // Real-time Polling
