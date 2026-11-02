@@ -908,6 +908,8 @@ def rebuild_2d_board_objects():
             )
 
             hand_cards = p["hand"]
+            valid_hand_ids = {c_d["id"] for c_d in hand_cards}
+            CONTROLLER.selected_card_ids.intersection_update(valid_hand_ids)
             n_hand = len(hand_cards)
             hand_spacing = min(1.24, 10.6 / max(1, n_hand))
             hand_start_x = -((n_hand - 1) * hand_spacing) * 0.5
@@ -1220,7 +1222,7 @@ class REMI2D_OT_StartModalGame(bpy.types.Operator):
 
                         if hit_act == "SELECT_CARD":
                             cid = hit_pld
-                            coll = bpy.data.collections.get("Remi_2D_Game_Objects")
+                            coll = get_dynamic_collection()
                             orig_locs = {}
                             if coll:
                                 for obj in coll.objects:

@@ -424,12 +424,13 @@ def test_tutup_tangan_with_single_ace_and_two_wildcards():
 def test_taking_discard_avoids_consuming_wildcard_from_hand():
     """
     Menguji Aturan Baru:
-    1. Mengambil kartu buangan otomatis memprioritaskan kombinasi natural (0 Wild Card dari tangan).
+    1. Mengambil kartu buangan otomatis memprioritaskan kombinasi natural (0 Wild Card pengganti).
        Jika pemain punya kartu natural untuk Seri dan juga memegang Wild Card (Joker / Rank Wild),
        Wild Card TIDAK BOLEH termakan otomatis ke dalam meld!
-    2. Jika pemain tidak memiliki kombinasi murni (hanya bisa dengan mengorbankan Wild Card),
-       pengambilan otomatis dicegah untuk melindungi Wild Card pemain, KECUALI pemain secara
-       eksplisit memilih kartu di tangannya (explicit_meld_card_ids).
+    2. Jika pemain tidak memiliki kombinasi murni (hanya bisa dengan Wild Card pengganti) dan BELUM
+       akan menutup kartu pada giliran tersebut, pengambilan buangan DITOLAK (bahkan jika eksplisit).
+    3. Jika pemain akan MENUTUP KARTU pada giliran tersebut, mengambil buangan dengan Wild Card
+       pengganti DIIZINKAN dan dihitung sebagai Tutup Biasa (bukan Tutup Tangan Murni +250).
     """
     game = RemiGameMatch(num_players=4)
     game.start_new_round(seed=1)
@@ -468,26 +469,34 @@ def test_taking_discard_avoids_consuming_wildcard_from_hand():
     assert 'JOKER' in hand_ids, 'JOKER harus tetap aman di tangan pemain!'
     assert '8C' in hand_ids, '8C (Wild) harus tetap aman di tangan pemain!'
 
-    # Tes 3: Kasus di mana pemain HANYA bisa membentuk kombinasi jika mengorbankan Wild Card
+    # Tes 3a: Pemain HANYA punya 1 kartu pasangan (5D) + JOKER dan BELUM akan menutup kartu (masih ada AD & 2H)
     p0.hand = [
         Card.from_id('5D'),
         Card.from_id('JOKER'),
         Card.from_id('AD'),
+        Card.from_id('2H'),
     ]
     p0.melds = [[Card.from_id('9S'), Card.from_id('10S'), Card.from_id('JS')]]  # Sudah aman seri
     game.discard_pile = [Card.from_id('6D')]
     game.phase = 'TURN_DRAW'
 
-    # Tanpa explicit selection: auto-take dicegah agar tidak rugi wild card
-    ok_auto, msg_auto, _ = game.can_take_discard(0, 0)
-    assert not ok_auto, 'Auto-take dengan wildcard dari tangan harus dicegah secara otomatis'
-    assert 'Wild Card' in msg_auto
+    ok_not_closing, msg_not_closing, _ = game.can_take_discard(0, 0)
+    assert not ok_not_closing, 'Ambil buangan dengan Wild Card pengganti saat belum menutup kartu harus DITOLAK!'
+    assert 'Wild Card' in msg_not_closing or 'menutup kartu' in msg_not_closing
 
-    # Dengan explicit selection: pemain sengaja memilih 5D dan JKR
-    ok_exp, msg_exp = game.take_from_discard(0, 0, explicit_meld_card_ids=['5D', 'JOKER'])
-    assert ok_exp, f'Explicit take harus diizinkan: {msg_exp}'
-    assert any('JOKER' in [c.id for c in m] for m in p0.melds), 'Meld dengan wildcard eksplisit berhasil diturunkan'
-    print('[PASS] Proteksi Wild Card saat ambil buangan lulus 100%!')
+    ok_exp_fail, _ = game.take_from_discard(0, 0, explicit_meld_card_ids=['5D', 'JOKER'])
+    assert not ok_exp_fail, 'Explicit take dengan Wild Card pengganti saat belum menutup kartu juga harus DITOLAK!'
+
+    # Tes 3b: Pemain akan MENUTUP KARTU pada giliran ini (tangan hanya 5D, JOKER, AD -> sisa 1 kartu buang AD)
+    p0.hand = [
+        Card.from_id('5D'),
+        Card.from_id('JOKER'),
+        Card.from_id('AD'),
+    ]
+    ok_closing, msg_closing = game.take_from_discard(0, 0)
+    assert ok_closing, f'Ambil buangan dengan Wild Card saat akan menutup kartu harus DIIZINKAN: {msg_closing}'
+    assert any('JOKER' in [c.id for c in m] for m in p0.melds), 'Meld dengan wildcard saat menutup kartu berhasil diturunkan'
+    print('[PASS] Proteksi & Aturan Wild Card saat ambil buangan lulus 100%!')
 
 
 def test_highest_score_player_starts_and_main_terus():
@@ -997,6 +1006,102 @@ def test_pure_tutup_tangan_freezes_other_players_scores_to_zero():
     print("[PASS] Tutup Tangan Murni membekukan skor pemain lain menjadi 0 (tidak dihitung plus/minus) Lulus 100%!")
 
 
+def test_take_discard_min_2_cards_in_hand_and_wildcard_rules():
+    """
+    Menguji perbaikan bug yang dilaporkan pengguna:
+    1. Mengambil dari kartu buangan minimal punya 2 kartu di tangan untuk Seri
+       (contoh: punya kartu 2S dan 3S di tangan baru bisa mengambil kartu 4S dari buangan;
+       TIDAK BISA jika hanya punya 1 kartu 3S di tangan lalu mengambil 2S sambil mengandalkan 4S dari tumpukan buangan).
+    2. Mengambil kartu buangan dengan Wild Card sebagai kartu biasa pada serinya sendiri
+       (contoh: Wild Card angka '3', di tangan punya 2S dan 3S(Wild) -> boleh mengambil 4S sebagai Seri 2S-3S-4S walau belum tutup).
+    3. Mengambil kartu buangan dengan Wild Card pengganti (misal 2S + 3H(Wild) atau 2S + JOKER untuk ambil 4S)
+       TIDAK BISA dilakukan saat main biasa, dan HANYA BISA dilakukan saat pemain akan menutup kartu
+       serta TIDAK dihitung Tutup Tangan Murni (dihitung Tutup Biasa).
+    """
+    game = RemiGameMatch(num_players=4)
+    game.start_new_round(seed=77)
+    game.wildcard_rank = "3"  # Wild Card adalah angka '3' + JOKER
+    p0 = game.players[0]
+
+    # --- SKENARIO 1: Minimal 2 kartu di tangan (tidak boleh 1 kartu tangan + 1 kartu ikut terambil dari buangan) ---
+    p0.melds = []
+    # Di tangan hanya punya 5S (1 kartu sekop), di buangan ada [4S, 6S]
+    p0.hand = [Card.from_id("5S"), Card.from_id("9H"), Card.from_id("KD"), Card.from_id("AC")]
+    game.discard_pile = [Card.from_id("4S"), Card.from_id("6S")]
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+
+    ok_one_card, msg_one_card, _ = game.can_take_discard(0, 0)
+    assert not ok_one_card, f"Harus DITOLAK karena di tangan hanya punya 1 kartu (5S), bukan min 2 kartu: {msg_one_card}"
+
+    # Jika di tangan punya 2 kartu (2D dan 4D) untuk mengambil 5D? Bukan seri (2-4-5 bolong).
+    # Jika di tangan punya 2S dan 3S? (3S adalah Wild Card tapi sesuai serinya sendiri!)
+    # Mari cek dulu punya 5S dan 6S di tangan, mengambil 7S dari buangan -> BOLEH!
+    p0.hand = [Card.from_id("5S"), Card.from_id("6S"), Card.from_id("9H"), Card.from_id("KD")]
+    game.discard_pile = [Card.from_id("7S")]
+    ok_two_cards, msg_two_cards, _ = game.can_take_discard(0, 0)
+    assert ok_two_cards, f"Harus BISA ambil 7S karena punya 2 kartu (5S, 6S) di tangan: {msg_two_cards}"
+
+    # --- SKENARIO 2: Wild Card sebagai Regular Card dengan serinya sendiri (2S + 3S(Wild) ambil 4S) ---
+    p0.melds = []
+    p0.hand = [
+        Card.from_id("2S"),
+        Card.from_id("3S"),  # 3S adalah Wild Card ('3'), tetapi kembang S dan angka 3 pas di Seri 2S-3S-4S!
+        Card.from_id("9H"),
+        Card.from_id("KD"),
+        Card.from_id("AC"),
+    ]
+    game.discard_pile = [Card.from_id("4S")]
+    game.phase = "TURN_DRAW"
+
+    ok_nat_wild, msg_nat_wild, req_meld = game.can_take_discard(0, 0)
+    assert ok_nat_wild, f"Harus BISA ambil 4S karena 3S berperan sebagai regular card pada serinya (2S-3S-4S): {msg_nat_wild}"
+    assert [c.id for c in req_meld] == ["2S", "3S", "4S"], f"Urutan seri harus 2S-3S-4S, didapat {[c.id for c in req_meld]}"
+
+    # Sebaliknya, jika di tangan punya 2S dan 3H (Wild Card beda kembang) dan belum menutup kartu -> HARUS DITOLAK!
+    p0.hand = [
+        Card.from_id("2S"),
+        Card.from_id("3H"),  # 3H bukan kembang Sekop, jadi berperan sebagai Wild Card pengganti
+        Card.from_id("9H"),
+        Card.from_id("KD"),
+        Card.from_id("AC"),
+    ]
+    ok_sub_wild, msg_sub_wild, _ = game.can_take_discard(0, 0)
+    assert not ok_sub_wild, f"Harus DITOLAK karena 3H bukan seri Sekop dan pemain belum menutup kartu: {msg_sub_wild}"
+
+    # --- SKENARIO 3: Ambil buangan dengan Wild Card pengganti SAAT AKAN MENUTUP KARTU (Tutup Biasa, bukan +250) ---
+    p0.melds = []
+    game.melds_count_at_turn_start = 0
+    # Tangan p0: 2S + 3H(Wild) [untuk ambil 4S], serta JH-QH-KH (Seri Face jadi), dan 9D (1 kartu buangan penutup)
+    p0.hand = [
+        Card.from_id("2S"),
+        Card.from_id("3H"),  # Wild Card pengganti 3S
+        Card.from_id("JH"),
+        Card.from_id("QH"),
+        Card.from_id("KH"),
+        Card.from_id("9D"),
+    ]
+    game.discard_pile = [Card.from_id("4S")]
+    game.card_discarder["4S"] = 2
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+
+    ok_close_wild, msg_close_wild = game.take_from_discard(0, 0)
+    assert ok_close_wild, f"Harus BISA ambil 4S dengan Wild Card 3H karena pemain akan menutup kartu: {msg_close_wild}"
+    assert game.must_close_this_turn is True
+
+    # Sekarang p0 menutup kartu dengan membuang 9D (atau lewat declare_tutup_tangan / discard_card)
+    ok_disc_close, msg_disc_close = game.discard_card(0, "9D")
+    assert ok_disc_close, f"Harus berhasil menutup kartu dengan membuang 9D: {msg_disc_close}"
+    assert game.phase == "ROUND_OVER"
+    assert not game.round_closed_by_tutup_tangan, "TIDAK BOLEH dihitung Tutup Tangan Murni (+250)!"
+    assert p0.last_round_score != TUTUP_TANGAN_BONUS, f"Skor tidak boleh 250, didapat {p0.last_round_score}"
+    # Meld 1: 2S-4S-3H (15 poin), Meld 2: JH-QH-KH (30 poin) -> Total Meld = 45 poin
+    # Bonus Tutup Biasa: 9D (5) x Wild '3' (5) = +25 poin -> Total = 70 poin
+    assert p0.last_round_score == 70, f"Skor Tutup Biasa harus 70, didapat {p0.last_round_score}"
+    print("[PASS] Aturan ambil buangan min 2 kartu di tangan & aturan Wild Card (regular seri vs tutup kartu) Lulus 100%!")
+
+
 if __name__ == "__main__":
     test_deck_53_and_4_wildcards_from_first_card()
     test_3_tier_separation_rules()
@@ -1019,4 +1124,5 @@ if __name__ == "__main__":
     test_pause_resume_feature()
     test_discard_keeps_cards_in_hand_until_auto_meld_clicked()
     test_pure_tutup_tangan_freezes_other_players_scores_to_zero()
-    print("\nSEMUA UNIT TEST REMI INDONESIA v3.4 LULUS 100%!")
+    test_take_discard_min_2_cards_in_hand_and_wildcard_rules()
+    print("\nSEMUA UNIT TEST REMI INDONESIA v3.5 LULUS 100%!")

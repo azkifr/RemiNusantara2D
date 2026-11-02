@@ -42,27 +42,30 @@ def _bot_background_worker():
         now = time.time()
         dt = now - last_t
         last_t = now
-        with GAME_LOCK:
-            if getattr(GAME, "is_paused", False):
-                continue
-            if GAME.phase in ("TURN_DRAW", "TURN_MELD_DISCARD"):
-                cur_p = GAME.players[GAME.current_turn_seat]
-                if cur_p.is_bot or cur_p.auto_pilot:
-                    bot_accum += dt
-                    delay = getattr(GAME, "bot_delay_sec", 1.0)
-                    if bot_accum >= delay:
-                        bot_accum = 0.0
-                        GAME.execute_bot_or_timeout_step()
-                else:
-                    if GAME.turn_timer_sec > 0:
-                        GAME.turn_remaining_sec = max(0.0, GAME.turn_remaining_sec - dt)
-                        if GAME.turn_remaining_sec <= 0.0:
+        try:
+            with GAME_LOCK:
+                if getattr(GAME, "is_paused", False):
+                    continue
+                if GAME.phase in ("TURN_DRAW", "TURN_MELD_DISCARD"):
+                    cur_p = GAME.players[GAME.current_turn_seat]
+                    if cur_p.is_bot or cur_p.auto_pilot:
+                        bot_accum += dt
+                        delay = getattr(GAME, "bot_delay_sec", 1.0)
+                        if bot_accum >= delay:
+                            bot_accum = 0.0
                             GAME.execute_bot_or_timeout_step()
-            elif GAME.phase == "ROUND_OVER":
-                if hasattr(GAME, "round_over_timer") and GAME.round_over_timer is not None:
-                    GAME.round_over_timer = max(0.0, GAME.round_over_timer - dt)
-                    if GAME.round_over_timer <= 0.0:
-                        GAME.start_new_round()
+                    else:
+                        if GAME.turn_timer_sec > 0:
+                            GAME.turn_remaining_sec = max(0.0, GAME.turn_remaining_sec - dt)
+                            if GAME.turn_remaining_sec <= 0.0:
+                                GAME.execute_bot_or_timeout_step()
+                elif GAME.phase == "ROUND_OVER":
+                    if hasattr(GAME, "round_over_timer") and GAME.round_over_timer is not None:
+                        GAME.round_over_timer = max(0.0, GAME.round_over_timer - dt)
+                        if GAME.round_over_timer <= 0.0:
+                            GAME.start_new_round()
+        except Exception as exc:
+            print(f"[WARN] Background worker error: {exc}")
 
 HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="id">
@@ -513,8 +516,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap !important;
-    overflow: hidden !important; /* Maksimal 7 kartu, tidak pernah melebar atau meluber */
-    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 5px;
     align-items: center;
     justify-content: center; /* Kartu berada di tengah rapi */
     width: 100%;
@@ -524,9 +528,10 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* DISCARD CARDS (MAX 7 TERATAS - AMBIL & AUTO JADI) */
   #disc-cards .card {
-    width: clamp(72px, 5.6vw, 84px);
-    height: clamp(108px, 8.4vw, 122px);
-    flex-shrink: 0;
+    width: clamp(54px, 4.4vw, 72px);
+    min-width: 50px;
+    height: clamp(96px, 7.6vw, 114px);
+    flex-shrink: 1;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
     cursor: grab;
@@ -540,16 +545,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
     box-shadow: 0 10px 22px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
   }
   /* ENLARGED LOGO & RANK IN DISCARD RAIL */
-  #disc-cards .c-rank { font-size: 21px !important; }
-  #disc-cards .c-suit-mini { font-size: 18px !important; }
-  #disc-cards .c-center { font-size: 52px !important; }
+  #disc-cards .c-rank { font-size: 17px !important; }
+  #disc-cards .c-suit-mini { font-size: 14px !important; }
+  #disc-cards .c-center { font-size: 38px !important; }
   #disc-cards .c-badge-pill {
     position: absolute;
-    bottom: 4px;
+    bottom: 3px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 9px;
-    padding: 2.5px 8px;
+    font-size: 8.5px;
+    padding: 2px 6px;
     background: #facc15;
     color: #0f172a;
     font-weight: 900;
@@ -1065,7 +1070,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   <!-- CENTER AREA: THE ARENA (Pak Kartu + Wild + BIG DISCARD RAIL) -->
   <div id="zone-center">
     <!-- PAK KARTU -->
-    <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" title="Klik atau Tarik ke tangan untuk ambil kartu">
+    <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu">
       <div style="font-weight:900;color:#fde047;font-size:11px;letter-spacing:0.5px;">PAK KARTU</div>
       <div id="pak-count" style="font-size:22px;font-weight:900;margin:3px 0;font-variant-numeric:tabular-nums;">(24)</div>
       <div style="font-size:8.5px;color:#cbd5e1;opacity:0.85;">KLIK / TARIK</div>
@@ -1404,16 +1409,37 @@ function updateUI(st) {
   const bannerEl = document.getElementById('hdr-turn-banner');
   const isMyTurn = (st.current_turn_seat === mySeat) && (st.phase === 'TURN_DRAW' || st.phase === 'TURN_MELD_DISCARD');
   const p0 = (st.players && st.players[mySeat]) ? st.players[mySeat] : null;
+
+  // Bersihkan pilihan kartu yang sudah tidak ada di tangan (agar tidak macet saat buang kartu)
+  if (p0 && p0.hand) {
+    const validHandIds = new Set(p0.hand.map(c => c.id));
+    for (const cid of Array.from(selectedCards)) {
+      if (!validHandIds.has(cid)) {
+        selectedCards.delete(cid);
+      }
+    }
+  } else {
+    selectedCards.clear();
+  }
+
   const canTutup = Boolean(p0 && p0.can_tutup_tangan);
   const tutupCardId = p0 ? (p0.tutup_discard_id || '') : '';
+  const canCloseRound = Boolean(p0 && p0.can_close_round);
+  const closeCardId = p0 ? (p0.close_discard_id || '') : '';
 
   const btnTutup = document.getElementById('btn-tutup-tangan');
   if (btnTutup) {
     if (canTutup && isMyTurn && st.phase === 'TURN_MELD_DISCARD') {
       btnTutup.classList.add('glow-tutup');
+      btnTutup.textContent = '🏆 TUTUP TANGAN +250 (T)';
       btnTutup.title = `KARTU LENGKAP! Klik untuk Tutup Tangan (+250 Poin) dengan membuang ${tutupCardId}!`;
+    } else if (canCloseRound && isMyTurn && st.phase === 'TURN_MELD_DISCARD') {
+      btnTutup.classList.add('glow-tutup');
+      btnTutup.textContent = `🏁 TUTUP KARTU (Buang ${closeCardId}) (T)`;
+      btnTutup.title = `KARTU LENGKAP! Klik untuk Menutup Kartu (Tutup Biasa) dengan membuang ${closeCardId}!`;
     } else {
       btnTutup.classList.remove('glow-tutup');
+      btnTutup.textContent = '🏆 TUTUP TANGAN +250 (T)';
       btnTutup.title = "Tutup Tangan langsung dari tangan (+250 Poin) (T)";
     }
   }
@@ -1433,7 +1459,7 @@ function updateUI(st) {
     if (isPaused) {
       bannerEl.className = 'turn-banner turn-opp';
       bannerEl.textContent = '⏸️ PERMAINAN DIHENTIKAN SEMENTARA (PAUSED) - TEKAN ESC UNTUK LANJUT ⏸️';
-    } else if (st.phase === 'GAME_OVER') {
+    } else if (st.phase === 'GAME_OVER' || st.phase === 'MATCH_OVER') {
       bannerEl.className = 'turn-banner turn-my';
       bannerEl.textContent = '🏆 PERMAINAN SELESAI! PEMENANG TARGET SKOR TELAH DITENTUKAN! 🏆';
     } else if (st.phase === 'ROUND_OVER') {
@@ -1446,6 +1472,8 @@ function updateUI(st) {
       } else {
         if (canTutup) {
           bannerEl.textContent = `★ GILIRAN ANDA! KARTU JADI LENGKAP! KLIK 'TUTUP TANGAN +250 (T)' (Buang ${tutupCardId})! ★`;
+        } else if (canCloseRound) {
+          bannerEl.textContent = `★ GILIRAN ANDA! SIAP MENUTUP KARTU (TUTUP BIASA)! Buang ${closeCardId} atau Klik 'TUTUP KARTU (T)'! ★`;
         } else {
           bannerEl.textContent = "★ GILIRAN ANDA! [TAHAP 2: SUSUN / BUANG] -> Klik 'AUTO TURUN (A)', 'TURUNKAN (M)', atau 'BUANG (B)' ★";
         }
@@ -1504,21 +1532,27 @@ function updateUI(st) {
       }
 
       const discSig = top7Discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
-      if (discSig !== lastDiscSig && !currentDrag) {
+      if (discSig !== lastDiscSig) {
         lastDiscSig = discSig;
         const count = top7Discards.length;
         discContainer.innerHTML = top7Discards.map((c, i) => {
           const actualIndex = startIdx + i;
           const revIdx = count - 1 - i; // 0 is newest (rightmost, AMBIL #1)
-          const badgeText = `AMBIL #${revIdx + 1}`;
-          const canClick = isMyTurn && (st.phase === 'TURN_DRAW');
+          const sliceToRight = top7Discards.slice(i);
+          const blockedByWild = sliceToRight.some(x => x.is_wild || x.rank === 'JOKER');
+          const isWildSelf = Boolean(c.is_wild || c.rank === 'JOKER');
+          const badgeText = isWildSelf ? 'WILD MATI' : (blockedByWild ? 'TERKUNCI' : `AMBIL #${revIdx + 1}`);
+          const canClick = isMyTurn && (st.phase === 'TURN_DRAW') && !blockedByWild;
           return renderCardHTML(c, {
             badge: badgeText,
-            onclick: canClick ? `takeDiscard(${actualIndex})` : '',
+            locked: blockedByWild,
+            onclick: (isMyTurn && st.phase === 'TURN_DRAW') ? `takeDiscard(${actualIndex})` : '',
             draggable: canClick,
             ondragstart: canClick ? `onDiscardDragStart(event, ${actualIndex})` : '',
             ondragend: `onDragEndClean(event)`,
-            hint: `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
+            hint: blockedByWild
+              ? `Tidak bisa diambil karena terhalang / merupakan Wild Card buangan`
+              : `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
           });
         }).join('');
       }
@@ -1603,24 +1637,27 @@ function updateUI(st) {
     if (myHandEl) {
       const handIds = (p0.hand || []).map(c => c.id).join(',');
       const selIds = Array.from(selectedCards).sort().join(',');
-      const handSig = `${handIds}|${selIds}|${isMyTurn}|${st.phase}`;
+      const handSig = `${handIds}|${selIds}|${isMyTurn}|${st.phase}|${st.forbidden_discard_card_id || ''}`;
       
-      if (handSig !== lastHandSig && !currentDrag) {
+      if (handSig !== lastHandSig) {
         lastHandSig = handSig;
         myHandEl.innerHTML = (p0.hand || []).map(c => {
           const isSel = selectedCards.has(c.id);
-          const canClick = isMyTurn && (st.phase === 'TURN_MELD_DISCARD');
+          const canDragDiscard = isMyTurn && (st.phase === 'TURN_MELD_DISCARD');
+          const isForbiddenDiscard = Boolean(st.forbidden_discard_card_id && st.forbidden_discard_card_id === c.id);
           const cardHtml = renderCardHTML(c, {
             selected: isSel
           });
           return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''}"
                        data-card-id="${c.id}"
-                       draggable="${canClick}"
+                       draggable="${canDragDiscard}"
                        ondragstart="onHandCardDragStart(event, '${c.id}')"
                        ondragend="onDragEndClean(event)"
+                       ondragover="onHandSlotDragOver(event, '${c.id}')"
+                       ondrop="onHandSlotDrop(event, '${c.id}')"
                        onclick="toggleCard('${c.id}')"
                        oncontextmenu="quickDiscard('${c.id}'); return false;"
-                       title="Klik untuk pilih; Geser ke Buangan / Klik Kanan untuk Buang (B)">
+                       title="${isForbiddenDiscard ? 'Kartu baru diambil dari buangan teratas (tidak boleh langsung dibuang di giliran ini)' : 'Klik untuk pilih; Geser ke Buangan / Klik Kanan untuk Buang (B)'}">
             ${cardHtml}
           </div>`;
         }).join('');
@@ -1647,25 +1684,39 @@ function quickDiscard(cardId) {
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
   if (!isMyTurn) return;
   selectedCards.clear();
+  lastHandSig = '';
+  lastDiscSig = '';
   sendAction('DISCARD', { card_id: cardId });
 }
 
 function meldSelected() {
   if (!selectedCards.size) {
-    alert("Pilih minimal 3 kartu di tangan untuk diturunkan!");
+    alert("Pilih minimal 1 kartu (untuk sambung ke meja) atau minimal 3 kartu di tangan untuk diturunkan!");
     return;
   }
-  sendAction('MELD_HAND', { card_ids: Array.from(selectedCards) });
+  const cids = Array.from(selectedCards);
   selectedCards.clear();
+  lastHandSig = '';
+  sendAction('MELD_HAND', { card_ids: cids });
 }
 
 function discardSelected() {
-  if (selectedCards.size !== 1) {
-    alert("Pilih tepat 1 kartu di tangan untuk dibuang!");
+  if (!latestState) return;
+  const p0 = latestState.players ? latestState.players[mySeat] : null;
+  let cid = null;
+  if (selectedCards.size === 1) {
+    cid = Array.from(selectedCards)[0];
+  } else if (selectedCards.size === 0 && p0 && p0.hand && p0.hand.length === 1) {
+    cid = p0.hand[0].id;
+  } else if (selectedCards.size === 0 && p0 && p0.can_close_round && p0.close_discard_id) {
+    cid = p0.close_discard_id;
+  } else {
+    alert("Pilih tepat 1 kartu di tangan untuk dibuang (atau klik kanan pada kartu yang ingin dibuang)!");
     return;
   }
-  const cid = Array.from(selectedCards)[0];
   selectedCards.clear();
+  lastHandSig = '';
+  lastDiscSig = '';
   sendAction('DISCARD', { card_id: cid });
 }
 
@@ -1673,24 +1724,36 @@ function declareTutupTangan() {
   if (!latestState) return;
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
   if (!isMyTurn) {
-    alert("Hanya bisa Tutup Tangan saat giliran Anda di tahap susun/buang!");
+    alert("Hanya bisa menutup kartu saat giliran Anda di tahap susun/buang!");
     return;
   }
   const p0 = latestState.players[mySeat];
-  if (!p0 || !p0.can_tutup_tangan) {
-    alert("Kartu Anda belum memenuhi syarat Tutup Tangan murni! Semua sisa kartu di tangan harus bisa disusun menjadi Seri/Kembar valid (dengan sisa 1 kartu buang).");
+  if (!p0 || (!p0.can_tutup_tangan && !p0.can_close_round)) {
+    alert("Kartu Anda belum memenuhi syarat menutup ronde! Semua sisa kartu di tangan harus bisa disusun menjadi Seri/Kembar valid (dengan sisa 1 kartu buang).");
     return;
   }
+  const chosenId = (selectedCards.size === 1) ? Array.from(selectedCards)[0] : (p0.tutup_discard_id || p0.close_discard_id || null);
   selectedCards.clear();
-  sendAction('TUTUP_TANGAN');
+  lastHandSig = '';
+  lastDiscSig = '';
+  sendAction('TUTUP_TANGAN', { card_id: chosenId });
 }
 
 function takeDiscard(idx) {
-  sendAction('TAKE_DISCARD', { index: idx, discard_index: idx });
+  const explicitIds = (selectedCards.size >= 2) ? Array.from(selectedCards) : null;
+  selectedCards.clear();
+  lastHandSig = '';
+  lastDiscSig = '';
+  sendAction('TAKE_DISCARD', { index: idx, discard_index: idx, card_ids: explicitIds });
 }
 
 async function sendAction(action, data = {}) {
   try {
+    if (action === 'DRAW_DECK' || action === 'AUTO_MELD') {
+      selectedCards.clear();
+      lastHandSig = '';
+      lastDiscSig = '';
+    }
     data.action = action;
     data.seat = mySeat;
     const res = await fetch(`/api/action?act=${action}`, {
@@ -1709,20 +1772,40 @@ function togglePause() {
   sendAction('TOGGLE_PAUSE');
 }
 
-// Drag & Drop
+// Drag & Drop (dilengkapi proteksi anti-stuck & deteksi micro-drag agar klik tidak pernah gagal)
 function onDragEndClean(e) {
+  const dragInfo = currentDrag;
   currentDrag = null;
   const zb = document.getElementById('zone-bottom');
   if (zb) { zb.classList.remove('drop-target-active'); zb.style.borderColor = ''; }
   const dr = document.getElementById('discard-rail');
   if (dr) { dr.classList.remove('drop-target-discard'); dr.style.borderColor = ''; }
+
+  // Jika pengguna bermaksud klik namun mouse bergeser sedikit (< 35px) sehingga browser memicu dragstart:
+  if (dragInfo && !dragInfo.handled && e) {
+    const dx = (e.clientX || 0) - (dragInfo.startX || 0);
+    const dy = (e.clientY || 0) - (dragInfo.startY || 0);
+    const dist = Math.hypot(dx, dy);
+    if (dist < 35) {
+      if (dragInfo.type === 'PAK') {
+        sendAction('DRAW_DECK');
+      } else if (dragInfo.type === 'DISCARD') {
+        takeDiscard(dragInfo.idx);
+      } else if (dragInfo.type === 'HAND') {
+        toggleCard(dragInfo.cardId);
+      }
+    }
+  }
 }
+
+window.addEventListener('dragend', onDragEndClean);
+window.addEventListener('mouseup', () => { currentDrag = null; });
 
 function onPakDragStart(e) {
   if (!latestState) return;
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_DRAW');
   if (!isMyTurn) { e.preventDefault(); return; }
-  currentDrag = { type: 'PAK' };
+  currentDrag = { type: 'PAK', startX: e.clientX || 0, startY: e.clientY || 0, handled: false };
   e.dataTransfer.setData('text/plain', 'PAK');
   e.dataTransfer.effectAllowed = 'copy';
   const zb = document.getElementById('zone-bottom');
@@ -1733,7 +1816,7 @@ function onDiscardDragStart(e, idx) {
   if (!latestState) return;
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_DRAW');
   if (!isMyTurn) { e.preventDefault(); return; }
-  currentDrag = { type: 'DISCARD', idx: idx };
+  currentDrag = { type: 'DISCARD', idx: idx, startX: e.clientX || 0, startY: e.clientY || 0, handled: false };
   e.dataTransfer.setData('text/plain', 'DISCARD_' + idx);
   e.dataTransfer.effectAllowed = 'copy';
   const zb = document.getElementById('zone-bottom');
@@ -1744,11 +1827,30 @@ function onHandCardDragStart(e, cardId) {
   if (!latestState) return;
   const isMyTurn = (latestState.current_turn_seat === mySeat) && (latestState.phase === 'TURN_MELD_DISCARD');
   if (!isMyTurn) { e.preventDefault(); return; }
-  currentDrag = { type: 'HAND', cardId: cardId };
+  currentDrag = { type: 'HAND', cardId: cardId, startX: e.clientX || 0, startY: e.clientY || 0, handled: false };
   e.dataTransfer.setData('text/plain', cardId);
   e.dataTransfer.effectAllowed = 'move';
   const dr = document.getElementById('discard-rail');
   if (dr) dr.classList.add('drop-target-discard');
+}
+
+function onHandSlotDragOver(e, targetCardId) {
+  if (currentDrag && currentDrag.type === 'HAND' && currentDrag.cardId !== targetCardId) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+}
+
+function onHandSlotDrop(e, targetCardId) {
+  if (currentDrag && currentDrag.type === 'HAND' && currentDrag.cardId !== targetCardId) {
+    e.preventDefault();
+    e.stopPropagation();
+    const srcId = currentDrag.cardId;
+    currentDrag.handled = true;
+    onDragEndClean(e);
+    lastHandSig = '';
+    sendAction('REORDER_HAND', { source_card_id: srcId, target_card_id: targetCardId });
+  }
 }
 
 function onDiscardDragOver(e) {
@@ -1767,11 +1869,13 @@ function onDiscardDragLeave(e) {
 function onDiscardDrop(e) {
   e.preventDefault();
   const dragInfo = currentDrag;
+  if (dragInfo) dragInfo.handled = true;
   onDragEndClean(e);
   if (dragInfo && dragInfo.type === 'HAND') {
     const cid = dragInfo.cardId;
     selectedCards.clear();
     lastHandSig = '';
+    lastDiscSig = '';
     sendAction('DISCARD', { card_id: cid });
   }
 }
@@ -1792,6 +1896,7 @@ function onHandDragLeave(e) {
 function onHandDrop(e) {
   e.preventDefault();
   const dragInfo = currentDrag;
+  if (dragInfo) dragInfo.handled = true;
   onDragEndClean(e);
   if (dragInfo && dragInfo.type === 'PAK') {
     lastHandSig = '';
