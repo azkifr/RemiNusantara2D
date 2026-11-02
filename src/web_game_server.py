@@ -2591,6 +2591,14 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 enableDragScroll(document.getElementById('disc-cards'));
 enableDragScroll(document.getElementById('my-hand'));
+
+function onHandDragOver(e) {
+  if (currentDrag && (currentDrag.type === 'PAK' || currentDrag.type === 'DISCARD')) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    const zb = document.getElementById('zone-bottom');
+    if (zb) zb.classList.add('drop-target-active');
+  }
 }
 
 function onHandDragLeave(e) {
@@ -3056,8 +3064,8 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(1); }
 });
 
-// Real-time Polling
-setInterval(async () => {
+// Real-time Polling (Instant Fetch on Load + 300ms Heartbeat)
+async function pollState() {
   try {
     const qParams = new URLSearchParams();
     if (mySeat !== null) qParams.set('seat', mySeat);
@@ -3066,7 +3074,9 @@ setInterval(async () => {
     const data = await res.json();
     if (data.state) updateUI(data.state);
   } catch (e) {}
-}, 300);
+}
+pollState();
+setInterval(pollState, 300);
 </script>
 </body>
 </html>"""
