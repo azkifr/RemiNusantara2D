@@ -33,37 +33,48 @@ def get_local_ip() -> str:
 GAME_LOCK = threading.Lock()
 GAME = RemiGameMatch(room_code="RM1500", num_players=4, turn_timer_sec=30)
 GAME.start_new_round()
+_LAST_TICK_TIME = time.time()
+_BOT_ACCUM = 0.0
+
+
+def tick_game_state_locked():
+    """Majukan timer giliran & langkah Bot berdasarkan selisih waktu nyata (mendukung Serverless Vercel maupun Thread lokal)."""
+    global _LAST_TICK_TIME, _BOT_ACCUM
+    now = time.time()
+    dt = min(1.5, max(0.0, now - _LAST_TICK_TIME))
+    _LAST_TICK_TIME = now
+    if dt <= 0.0:
+        return
+    if getattr(GAME, "is_paused", False):
+        return
+    if GAME.phase in ("TURN_DRAW", "TURN_MELD_DISCARD"):
+        cur_p = GAME.players[GAME.current_turn_seat]
+        if cur_p.is_bot or cur_p.auto_pilot:
+            _BOT_ACCUM += dt
+            delay = getattr(GAME, "bot_delay_sec", 1.0)
+            if _BOT_ACCUM >= delay:
+                _BOT_ACCUM = 0.0
+                GAME.execute_bot_or_timeout_step()
+        else:
+            _BOT_ACCUM = 0.0
+            if GAME.turn_timer_sec > 0:
+                GAME.turn_remaining_sec = max(0.0, GAME.turn_remaining_sec - dt)
+                if GAME.turn_remaining_sec <= 0.0:
+                    GAME.execute_bot_or_timeout_step()
+    elif GAME.phase == "ROUND_OVER":
+        _BOT_ACCUM = 0.0
+        if hasattr(GAME, "round_over_timer") and GAME.round_over_timer is not None:
+            GAME.round_over_timer = max(0.0, GAME.round_over_timer - dt)
+            if GAME.round_over_timer <= 0.0:
+                GAME.start_new_round()
+
 
 def _bot_background_worker():
-    last_t = time.time()
-    bot_accum = 0.0
     while True:
         time.sleep(0.15)
-        now = time.time()
-        dt = now - last_t
-        last_t = now
         try:
             with GAME_LOCK:
-                if getattr(GAME, "is_paused", False):
-                    continue
-                if GAME.phase in ("TURN_DRAW", "TURN_MELD_DISCARD"):
-                    cur_p = GAME.players[GAME.current_turn_seat]
-                    if cur_p.is_bot or cur_p.auto_pilot:
-                        bot_accum += dt
-                        delay = getattr(GAME, "bot_delay_sec", 1.0)
-                        if bot_accum >= delay:
-                            bot_accum = 0.0
-                            GAME.execute_bot_or_timeout_step()
-                    else:
-                        if GAME.turn_timer_sec > 0:
-                            GAME.turn_remaining_sec = max(0.0, GAME.turn_remaining_sec - dt)
-                            if GAME.turn_remaining_sec <= 0.0:
-                                GAME.execute_bot_or_timeout_step()
-                elif GAME.phase == "ROUND_OVER":
-                    if hasattr(GAME, "round_over_timer") and GAME.round_over_timer is not None:
-                        GAME.round_over_timer = max(0.0, GAME.round_over_timer - dt)
-                        if GAME.round_over_timer <= 0.0:
-                            GAME.start_new_round()
+                tick_game_state_locked()
         except Exception as exc:
             print(f"[WARN] Background worker error: {exc}")
 
@@ -2065,6 +2076,7 @@ class RemiWebHandler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             seat = int(qs.get("seat", ["0"])[0])
             with GAME_LOCK:
+                tick_game_state_locked()
                 st = _format_state_dict(seat)
             self._send_json({"state": st})
             return
