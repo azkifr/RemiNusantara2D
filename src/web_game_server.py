@@ -461,7 +461,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* PAK KARTU (Draw Deck 3D) */
   #pak-box {
     width: clamp(88px, 7vw, 100px);
-    height: clamp(150px, 11.6vw, 166px);
+    height: clamp(168px, 12.6vw, 186px);
     background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
     border: 2px solid #fbbf24;
     border-radius: 12px;
@@ -500,7 +500,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: center;
     width: clamp(88px, 7vw, 100px);
-    height: clamp(150px, 11.6vw, 166px);
+    height: clamp(168px, 12.6vw, 186px);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(192, 132, 252, 0.3);
     flex-shrink: 0;
   }
@@ -515,64 +515,178 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #wild-card-slot .card .c-center { font-size: 56px !important; }
 
   /* ======================================================== */
-  /* PROMINENT DISCARD RAIL (KARTU YANG DIBUANG - MAX 7 TERATAS) */
+  /* STATIC DISCARD RAIL & BURIED TRAY (7 STATIC SLOTS)      */
   /* ======================================================== */
   #discard-rail {
-    background: rgba(3, 24, 14, 0.88);
+    background: rgba(3, 24, 14, 0.92);
     border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 6px 12px 8px 12px;
+    padding: 6px 10px 8px 10px;
     flex: 1;
     min-width: 0;
-    min-height: 154px;
-    height: clamp(154px, 11.8vw, 172px);
+    min-height: 168px;
+    height: clamp(168px, 12.6vw, 186px);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+    align-items: stretch;
+    justify-content: space-between;
     box-shadow: inset 0 2px 12px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
     position: relative;
   }
-  #disc-title {
+  .disc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 3px;
+    flex-shrink: 0;
+  }
+  .disc-title {
     font-size: 11px;
     font-weight: 800;
     color: #fde047;
-    margin-bottom: 4px;
     letter-spacing: 0.3px;
-    flex-shrink: 0;
-    width: 100%;
-    text-align: left;
   }
-  #disc-cards {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 6px;
-    align-items: center;
-    justify-content: flex-start; /* Kartu mengalir dari kiri ke kanan agar saat bertambah bisa digeser/scroll tanpa terpotong */
-    width: 100%;
-    flex: 1;
-    padding: 2px 6px 6px 6px;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    cursor: grab;
-  }
-  #disc-cards:active {
-    cursor: grabbing;
+  .disc-count-pill {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  /* DISCARD CARDS (MAX 7 TERATAS - AMBIL & AUTO JADI) */
+  /* TRAY KARTU KECIL DI ATAS PLACE HOLDER KARTU BUANGAN */
+  .disc-buried-tray {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    margin-bottom: 5px;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.42);
+    border-radius: 8px;
+    border: 1px solid rgba(250, 204, 21, 0.2);
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 5px;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(250, 204, 21, 0.4) transparent;
+  }
+  .buried-tray-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: #facc15;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-right: 2px;
+  }
+  .buried-empty-hint {
+    font-size: 9.5px;
+    color: rgba(203, 213, 225, 0.45);
+    font-style: italic;
+    white-space: nowrap;
+  }
+  .disc-buried-tray .card.buried-mini {
+    width: 25px !important;
+    min-width: 25px !important;
+    height: 32px !important;
+    border-radius: 4px !important;
+    opacity: 0.85;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .disc-buried-tray .card.buried-mini:hover {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.22) !important;
+    z-index: 50;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8), 0 0 10px rgba(250, 204, 21, 0.6);
+  }
+  .disc-buried-tray .card.buried-mini .c-mini-top {
+    font-size: 8.5px !important;
+    top: 1px !important;
+    left: 2px !important;
+    right: 2px !important;
+  }
+  .disc-buried-tray .card.buried-mini .c-mini-center {
+    font-size: 14px !important;
+  }
+  .disc-buried-tray .card.buried-mini .c-mini-bot {
+    display: none;
+  }
+
+  /* STATIC PLACE HOLDER KARTU BUANGAN (7 FIXED SLOTS GRID) */
+  #disc-cards {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    flex: 1;
+    padding: 2px 2px;
+    position: relative;
+    overflow: hidden; /* Static 7-slot container - no scrolling needed */
+  }
+  .disc-slot-placeholder {
+    width: 100%;
+    max-width: 68px;
+    height: clamp(88px, 6.8vw, 106px);
+    border: 1.5px dashed rgba(250, 204, 21, 0.22);
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.22);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: rgba(250, 204, 21, 0.35);
+    user-select: none;
+    pointer-events: none;
+    transition: all 0.15s ease;
+    margin: 0 auto;
+  }
+  .disc-slot-num {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .disc-slot-icon {
+    font-size: 17px;
+    opacity: 0.35;
+  }
+  .drop-target-discard .disc-slot-placeholder {
+    border-color: #f87171 !important;
+    background: rgba(248, 113, 113, 0.12) !important;
+    color: #fca5a5 !important;
+  }
+
+  /* ACTIVE DISCARD CARDS IN STATIC SLOTS */
   #disc-cards .card {
-    width: clamp(54px, 4.4vw, 72px);
-    min-width: 50px;
-    height: clamp(96px, 7.6vw, 114px);
-    flex-shrink: 1;
+    width: 100%;
+    max-width: 68px;
+    min-width: 44px;
+    height: clamp(88px, 6.8vw, 106px);
+    flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
     cursor: grab;
+    margin: 0 auto;
   }
   #disc-cards .card:active {
     cursor: grabbing;
@@ -583,16 +697,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
     box-shadow: 0 10px 22px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
   }
   /* ENLARGED LOGO & RANK IN DISCARD RAIL */
-  #disc-cards .c-rank { font-size: 17px !important; }
-  #disc-cards .c-suit-mini { font-size: 14px !important; }
-  #disc-cards .c-center { font-size: 38px !important; }
+  #disc-cards .c-rank { font-size: 16px !important; }
+  #disc-cards .c-suit-mini { font-size: 13px !important; }
+  #disc-cards .c-center { font-size: 34px !important; }
   #disc-cards .c-badge-pill {
     position: absolute;
     bottom: 3px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 8.5px;
-    padding: 2px 6px;
+    font-size: 8px;
+    padding: 1.5px 5px;
     background: #facc15;
     color: #0f172a;
     font-weight: 900;
@@ -602,37 +716,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
     white-space: nowrap;
     pointer-events: none;
     z-index: 5;
-  }
-
-  /* BURIED MINI DISCARD CARDS */
-  #disc-cards .card.buried-mini {
-    width: 36px !important;
-    min-width: 36px !important;
-    height: 56px !important;
-    opacity: 0.72;
-    filter: brightness(0.85);
-    border-radius: 6px;
-    cursor: default;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-    transform: none !important;
-  }
-  #disc-cards .card.buried-mini:hover {
-    opacity: 1;
-    filter: brightness(1);
-    transform: translateY(-3px) scale(1.08) !important;
-    z-index: 25;
-  }
-  #disc-cards .card.buried-mini .c-mini-top { font-size: 11px !important; }
-  #disc-cards .card.buried-mini .c-mini-center { font-size: 20px !important; }
-  #disc-cards .card.buried-mini .c-mini-bot { display: none; }
-  .disc-divider {
-    width: 2px;
-    height: 65%;
-    background: rgba(250, 204, 21, 0.45);
-    margin: 0 4px;
-    flex-shrink: 0;
-    align-self: center;
-    border-radius: 2px;
   }
 
   /* ======================================================== */
@@ -1749,11 +1832,17 @@ HTML_PAGE = r"""<!DOCTYPE html>
       <div id="wild-card-slot"></div>
     </div>
 
-    <!-- PROMINENT DISCARD RAIL -->
+    <!-- PROMINENT STATIC DISCARD RAIL WITH BURIED TRAY ON TOP -->
     <div id="discard-rail" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
-      <div id="disc-title" style="font-size:10.5px;font-weight:800;color:#fde047;margin-bottom:3px;letter-spacing:0.3px;">
-        TUMPUKAN BUANGAN (Ambil #1-#7 & Otomatis Jadi):
+      <div class="disc-header">
+        <span id="disc-title" class="disc-title">TUMPUKAN BUANGAN (7 Teratas Aktif):</span>
+        <span id="disc-count-pill" class="disc-count-pill">0 Kartu</span>
       </div>
+      <!-- TRAY KARTU KECIL DI ATAS PLACE HOLDER KARTU BUANGAN -->
+      <div id="disc-buried-tray" class="disc-buried-tray">
+        <span class="buried-empty-hint">Riwayat Kartu Lama: (Belum ada kartu terkubur)</span>
+      </div>
+      <!-- STATIC PLACE HOLDER KARTU BUANGAN (7 SLOT TETAP) -->
       <div id="disc-cards"></div>
     </div>
   </div>
@@ -2317,57 +2406,62 @@ function updateUI(st) {
     }
   }
 
-  // Render Discard Rail (7 Teratas Aktif + Kartu Lama Versi Kecil & Otomatis Jadi!)
+  // Render Discard Rail (Static 7-slot Placeholder + Mini Buried Cards Tray di atasnya)
   const discContainer = document.getElementById('disc-cards');
+  const buriedTray = document.getElementById('disc-buried-tray');
   const discTitleEl = document.getElementById('disc-title');
+  const discCountPill = document.getElementById('disc-count-pill');
   if (discContainer) {
-    if (!discards || !discards.length) {
-      if (discTitleEl) discTitleEl.textContent = 'TUMPUKAN BUANGAN (7 Teratas Aktif & Otomatis Jadi):';
-      discContainer.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);font-style:italic;padding:4px;">(Tumpukan buangan masih kosong)</div>';
-      lastDiscSig = '';
-    } else {
-      const totalDisc = discards.length;
-      const MAX_DISC = 7;
-      const startIdx = Math.max(0, totalDisc - MAX_DISC);
-      const buriedDiscards = discards.slice(0, startIdx);
-      const top7Discards = discards.slice(startIdx);
-      const buriedCount = startIdx;
+    const totalDisc = discards.length;
+    const MAX_DISC = 7;
+    const startIdx = Math.max(0, totalDisc - MAX_DISC);
+    const buriedDiscards = discards.slice(0, startIdx);
+    const top7Discards = discards.slice(startIdx);
+    const buriedCount = startIdx;
 
-      if (discTitleEl) {
-        if (buriedCount > 0) {
-          discTitleEl.innerHTML = `TUMPUKAN BUANGAN (<span style="color:#fde047;">7 Teratas Aktif</span> & Otomatis Jadi | <span style="color:#94a3b8;font-size:10px;">${buriedCount} Kartu Lama (Versi Kecil)</span>):`;
-        } else {
-          discTitleEl.textContent = `TUMPUKAN BUANGAN (Total: ${totalDisc} Kartu — Ambil #1-#${totalDisc} & Otomatis Jadi):`;
-        }
+    if (discTitleEl) {
+      discTitleEl.textContent = 'TUMPUKAN BUANGAN (7 Teratas Aktif):';
+    }
+    if (discCountPill) {
+      discCountPill.textContent = `${totalDisc} Kartu${buriedCount > 0 ? ` (${buriedCount} Terkubur)` : ''}`;
+    }
+
+    // 1. Render Kartu Kecil di Atas Place Holder (#disc-buried-tray)
+    if (buriedTray) {
+      if (buriedCount === 0) {
+        buriedTray.innerHTML = '<span class="buried-empty-hint">Riwayat Kartu Lama: (Belum ada kartu terkubur)</span>';
+      } else {
+        const miniCardsHtml = buriedDiscards.map((c, bi) => {
+          return renderCardHTML(c, {
+            small: true,
+            locked: true,
+            hint: `Kartu buangan lama #${bi + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif`
+          }).replace('class="card', 'class="card buried-mini');
+        }).join('');
+        buriedTray.innerHTML = `<span class="buried-tray-label">🗄️ LAMA (${buriedCount}):</span>` + miniCardsHtml;
+        buriedTray.scrollLeft = buriedTray.scrollWidth;
       }
+    }
 
-      const discSig = discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
-      if (discSig !== lastDiscSig) {
-        lastDiscSig = discSig;
-        const count = top7Discards.length;
+    // 2. Render Static 7-Card Placeholder Slots (#disc-cards)
+    const discSig = discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
+    if (discSig !== lastDiscSig) {
+      lastDiscSig = discSig;
+      const count = top7Discards.length;
 
-        // 1. Buried discards (versi kecil)
-        let buriedHtml = '';
-        if (buriedDiscards.length > 0) {
-          buriedHtml = buriedDiscards.map(c => {
-            return renderCardHTML(c, {
-              small: true,
-              locked: true,
-              hint: `Kartu buangan lama (${c.rank}${c.suit}) - terkubur di bawah 7 kartu teratas`
-            }).replace('class="card', 'class="card buried-mini');
-          }).join('') + '<div class="disc-divider" title="Batas 7 Kartu Buangan Teratas"></div>';
-        }
-
-        // 2. Top 7 discards (ukuran normal aktif)
-        const topHtml = top7Discards.map((c, i) => {
-          const actualIndex = startIdx + i;
-          const revIdx = count - 1 - i; // 0 is newest (rightmost, AMBIL #1)
-          const sliceToRight = top7Discards.slice(i);
+      let slotsHtml = '';
+      for (let slot = 0; slot < MAX_DISC; slot++) {
+        if (slot < count) {
+          const c = top7Discards[slot];
+          const actualIndex = startIdx + slot;
+          const revIdx = count - 1 - slot; // 0 is newest (rightmost, AMBIL #1)
+          const sliceToRight = top7Discards.slice(slot);
           const blockedByWild = sliceToRight.some(x => x.is_wild || x.rank === 'JOKER');
           const isWildSelf = Boolean(c.is_wild || c.rank === 'JOKER');
           const badgeText = isWildSelf ? 'WILD MATI' : (blockedByWild ? 'TERKUNCI' : `AMBIL #${revIdx + 1}`);
           const canClick = isMyTurn && (st.phase === 'TURN_DRAW') && !blockedByWild;
-          return renderCardHTML(c, {
+
+          slotsHtml += renderCardHTML(c, {
             badge: badgeText,
             locked: blockedByWild,
             onclick: (isMyTurn && st.phase === 'TURN_DRAW') ? `takeDiscard(${actualIndex})` : '',
@@ -2378,11 +2472,16 @@ function updateUI(st) {
               ? `Tidak bisa diambil karena terhalang / merupakan Wild Card buangan`
               : `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
           });
-        }).join('');
-
-        discContainer.innerHTML = buriedHtml + topHtml;
-        discContainer.scrollLeft = discContainer.scrollWidth;
+        } else {
+          // Static Empty Slot Placeholder
+          const slotNum = slot + 1;
+          slotsHtml += `<div class="disc-slot-placeholder" title="Slot Kartu Buangan #${slotNum} (Kosong)">
+            <span class="disc-slot-num">SLOT #${slotNum}</span>
+            <span class="disc-slot-icon">🂠</span>
+          </div>`;
+        }
       }
+      discContainer.innerHTML = slotsHtml;
     }
   }
 
@@ -2890,10 +2989,10 @@ function enableDragScroll(el) {
   });
 }
 window.addEventListener('DOMContentLoaded', () => {
-  enableDragScroll(document.getElementById('disc-cards'));
+  enableDragScroll(document.getElementById('disc-buried-tray'));
   enableDragScroll(document.getElementById('my-hand'));
 });
-enableDragScroll(document.getElementById('disc-cards'));
+enableDragScroll(document.getElementById('disc-buried-tray'));
 enableDragScroll(document.getElementById('my-hand'));
 
 function onHandDragOver(e) {
