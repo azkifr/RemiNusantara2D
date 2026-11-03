@@ -31,7 +31,7 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 GAME_LOCK = threading.Lock()
-GAME = RemiGameMatch(room_code="RM1500", num_players=4, turn_timer_sec=30)
+GAME = RemiGameMatch(room_code="RM1500", num_players=4, turn_timer_sec=0)
 for p in GAME.players:
     p.player_id = ""
 # Server dimulai dalam fase LOBBY agar pemain dapat berkumpul, memilih kursi, dan mengatur nama
@@ -1242,7 +1242,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border: 2px solid #facc15;
     border-radius: 20px;
     width: 100%;
-    max-width: 520px;
+    max-width: 820px;
     padding: 24px;
     text-align: center;
     box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(250, 204, 21, 0.25);
@@ -1314,6 +1314,98 @@ HTML_PAGE = r"""<!DOCTYPE html>
     background: rgba(250, 204, 21, 0.12);
     color: #fde047;
     font-weight: 800;
+  }
+  .hist-card-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin-right: 5px;
+    margin-bottom: 3px;
+    vertical-align: middle;
+  }
+  .card.hist-mini {
+    width: 27px !important;
+    min-width: 27px !important;
+    height: 36px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5) !important;
+  }
+  .card.hist-mini .c-mini-top {
+    font-size: 8.5px !important;
+    top: 1px !important;
+    left: 2px !important;
+    right: 2px !important;
+  }
+  .card.hist-mini .c-mini-center {
+    font-size: 15px !important;
+  }
+  .card.hist-mini .c-mini-bot {
+    display: none !important;
+  }
+
+  /* HISTORY & SCOREBOARD MODAL */
+  #history-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.9);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    padding: 16px;
+  }
+  .history-modal-card {
+    background: linear-gradient(145deg, #0f172a, #032213);
+    border: 2px solid #34d399;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 860px;
+    max-height: 88vh;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(52, 211, 153, 0.25);
+    animation: modalPop 0.3s cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  }
+  .history-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  .history-modal-title {
+    font-size: 19px;
+    font-weight: 900;
+    color: #34d399;
+    letter-spacing: 0.5px;
+  }
+  .history-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .history-round-box {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .history-round-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fde047;
   }
   .btn-next-round {
     background: linear-gradient(135deg, #16a34a, #15803d);
@@ -1740,11 +1832,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
         </div>
 
         <div class="setting-group" style="margin-bottom:0;">
-          <div class="setting-label">TIMER GILIRAN: <span id="lobby-timer-badge" style="color:#38bdf8;">30s</span></div>
+          <div class="setting-label">TIMER GILIRAN: <span id="lobby-timer-badge" style="color:#38bdf8;">Tanpa</span></div>
           <div id="lobby-timer-pills" class="pills-container">
-            <button class="pill-btn" onclick="updateLobbyConfig('timer', 0)">Tanpa</button>
+            <button class="pill-btn active" onclick="updateLobbyConfig('timer', 0)">Tanpa</button>
             <button class="pill-btn" onclick="updateLobbyConfig('timer', 15)">15s</button>
-            <button class="pill-btn active" onclick="updateLobbyConfig('timer', 30)">30s</button>
+            <button class="pill-btn" onclick="updateLobbyConfig('timer', 30)">30s</button>
             <button class="pill-btn" onclick="updateLobbyConfig('timer', 45)">45s</button>
           </div>
         </div>
@@ -1778,6 +1870,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <span id="hdr-title" class="header-title">REMI NUSANTARA 2D</span>
       </div>
       <div class="header-btn-group">
+        <button id="btn-show-history" onclick="openHistoryModal()" class="header-dash-btn" style="background: rgba(16, 185, 129, 0.2); border-color: #34d399; color: #a7f3d0;" title="Lihat Riwayat Skor & Kartu Permainan (H)">
+          📜 RIWAYAT (H)
+        </button>
         <button id="btn-to-lobby" onclick="returnToLobby()" class="header-dash-btn" style="background: rgba(239, 68, 68, 0.2); border-color: #f87171; color: #fca5a5;" title="Kembali ke Ruang Lobby (Reset Room)">
           🏠 LOBBY
         </button>
@@ -1926,22 +2021,42 @@ HTML_PAGE = r"""<!DOCTYPE html>
       <div id="winner-hero-name" class="winner-hero-name">Pemenang: -</div>
       <div id="winner-hero-score" class="winner-hero-score">+0 Poin Ronde Ini</div>
     </div>
-    <table class="standings-table">
-      <thead>
-        <tr>
-          <th>Pemain</th>
-          <th style="text-align:center;">Ronde Ini</th>
-          <th style="text-align:right;">Total Skor</th>
-        </tr>
-      </thead>
-      <tbody id="winner-table-body"></tbody>
-    </table>
-    <div id="winner-countdown-text" style="font-size:12px;color:#cbd5e1;margin-bottom:14px;">
-      ⏳ Ronde berikutnya otomatis dalam <span id="winner-countdown-sec" style="font-weight:900;color:#fde047;">5</span> detik...
+    <div style="overflow-x: auto; margin-bottom: 16px;">
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th style="min-width: 140px;">Pemain</th>
+            <th style="min-width: 240px;">Kartu Jadi (Melds)</th>
+            <th style="min-width: 160px;">Sisa Kartu Tangan</th>
+            <th style="text-align:center; min-width: 80px;">Ronde Ini</th>
+            <th style="text-align:right; min-width: 80px;">Total Skor</th>
+          </tr>
+        </thead>
+        <tbody id="winner-table-body"></tbody>
+      </table>
     </div>
-    <button id="btn-next-round-action" class="btn-next-round" onclick="nextRoundNow()">
-      ▶️ LANJUT KE RONDE BERIKUTNYA
-    </button>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <button id="btn-next-round-action" class="btn-next-round" style="flex:1; min-width:240px;" onclick="nextRoundNow()">
+        ▶️ LANJUT KE RONDE BERIKUTNYA
+      </button>
+      <button class="pill-btn" onclick="openHistoryModal()" style="background:rgba(16,185,129,0.25); border:1px solid #34d399; color:#a7f3d0; font-size:13px; font-weight:800; padding:10px 18px; border-radius:12px; cursor:pointer;">
+        📜 RIWAYAT LENGKAP
+      </button>
+      <button class="pill-btn" onclick="returnToLobby()" style="background:rgba(239,68,68,0.2); border:1px solid #f87171; color:#fca5a5; font-size:13px; font-weight:800; padding:10px 18px; border-radius:12px; cursor:pointer;">
+        🏠 KE LOBBY
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY & SCOREBOARD MODAL -->
+<div id="history-modal">
+  <div class="history-modal-card">
+    <div class="history-modal-header">
+      <div class="history-modal-title">📜 RIWAYAT PERMAINAN & KARTU</div>
+      <button onclick="closeHistoryModal()" class="pill-btn" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; font-weight:800; padding:6px 14px; border-radius:8px; cursor:pointer;">✕ TUTUP</button>
+    </div>
+    <div id="history-modal-body" class="history-modal-body"></div>
   </div>
 </div>
 
@@ -2010,11 +2125,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
       </div>
     </div>
     <div class="setting-group">
-      <div class="setting-label">TIMER PER GILIRAN: <span id="timer-badge-active" style="color:#38bdf8;font-weight:800;">30 Detik</span></div>
+      <div class="setting-label">TIMER PER GILIRAN: <span id="timer-badge-active" style="color:#38bdf8;font-weight:800;">Tanpa Timer (Santai)</span></div>
       <div id="timer-pills" class="pills-container">
-        <button class="pill-btn" onclick="selectConfig('timer', 0)">Tanpa Timer (Santai)</button>
+        <button class="pill-btn active" onclick="selectConfig('timer', 0)">Tanpa Timer (Santai)</button>
         <button class="pill-btn" onclick="selectConfig('timer', 15)">15s (Blitz)</button>
-        <button class="pill-btn active" onclick="selectConfig('timer', 30)">30s (Standar)</button>
+        <button class="pill-btn" onclick="selectConfig('timer', 30)">30s (Standar)</button>
         <button class="pill-btn" onclick="selectConfig('timer', 45)">45s (Cukup)</button>
       </div>
       <div id="timer-explain" style="font-size:10.5px;color:#94a3b8;margin-top:4px;">Auto buang kartu jika waktu habis</div>
@@ -2072,7 +2187,7 @@ const SUIT_ICON = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
 let currentConfig = {
   players: 4,
   score: 1500,
-  timer: 30,
+  timer: 0,
   botDelay: 1.0,
   playerName: 'Anda (Player 1)'
 };
@@ -2139,6 +2254,29 @@ function renderMeldsHTML(melds, isOpp = false) {
     return '<div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>';
   }
   return melds.map(m => `<div class="meld-group">${m.map(c => renderCardHTML(c, { small: true })).join('')}</div>`).join('');
+}
+
+function renderCardMiniGroup(cardList) {
+  if (!cardList || cardList.length === 0) return '';
+  return '<div class="hist-card-group">' + cardList.map(c => {
+    return renderCardHTML(c, { small: true }).replace('class="card', 'class="card hist-mini');
+  }).join('') + '</div>';
+}
+
+function renderPlayerMeldsHTML(melds) {
+  if (!melds || melds.length === 0) {
+    return '<span style="color:#f87171; font-size:11px; font-style:italic;">(Tidak ada kartu jadi)</span>';
+  }
+  return melds.map(m => renderCardMiniGroup(m)).join('');
+}
+
+function renderPlayerHandHTML(hand, isClosed) {
+  if (!hand || hand.length === 0) {
+    return '<span style="color:#4ade80; font-size:11.5px; font-weight:700;">✓ Habis (Tutup)</span>';
+  }
+  return '<div style="display:inline-flex; gap:2px; flex-wrap:wrap; align-items:center;">' + hand.map(c => {
+    return renderCardHTML(c, { small: true }).replace('class="card', 'class="card hist-mini');
+  }).join('') + '</div>';
 }
 
 function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat) {
@@ -2243,14 +2381,10 @@ function updateUI(st) {
   const activeSeat = (mySeat !== null) ? mySeat : 0;
   const wRank = st.wildcard_rank || '-';
   const isPaused = Boolean(st.is_paused);
-  const timerStr = isPaused
-    ? '⏸️ PAUSED'
-    : ((st.turn_timer_sec <= 0)
-      ? '∞ (Unlimited)'
-      : ((st.phase === 'TURN_DRAW' || st.phase === 'TURN_MELD_DISCARD') ? Math.ceil(st.turn_remaining_sec) + 's' : '--'));
+  const pauseSuffix = isPaused ? ' | ⏸️ DIJEDA' : '';
 
   document.getElementById('hdr-title').textContent =
-    `REMI NUSANTARA 2D | Room: #${st.room_code} | Ronde: ${st.round_number} | WILD: JOKER + '${wRank}' | Target: ${st.target_score} | ⏱️ TIMER: ${timerStr}`;
+    `REMI NUSANTARA 2D | Room: #${st.room_code} | Ronde: ${st.round_number} | WILD: JOKER + '${wRank}' | Target: ${st.target_score}${pauseSuffix}`;
 
   const btnPauseHdr = document.getElementById('btn-pause-header');
   const btnPauseAct = document.getElementById('btn-pause-action');
@@ -2357,20 +2491,19 @@ function updateUI(st) {
           const scoreClass = rScore > 0 ? 'color:#4ade80;' : (rScore < 0 ? 'color:#f87171;' : 'color:#94a3b8;');
           const scoreText = rScore > 0 ? `+${rScore}` : `${rScore}`;
           const burnTag = p.burned_last_round ? ' <span style="color:#f87171;font-size:10px;">🔥TERBAKAR</span>' : '';
+          const meldsHtml = renderPlayerMeldsHTML(p.melds);
+          const handHtml = renderPlayerHandHTML(p.hand, isW);
           return `<tr class="${isW ? 'winner-row' : ''}">
-            <td>${isW ? '👑 ' : ''}${p.name}${burnTag}</td>
-            <td style="text-align:center;font-weight:700;${scoreClass}">${scoreText}</td>
-            <td style="text-align:right;font-weight:800;">${p.total_score}</td>
+            <td style="font-weight:700;">${isW ? '👑 ' : ''}${p.name}${burnTag}</td>
+            <td>${meldsHtml}</td>
+            <td>${handHtml}</td>
+            <td style="text-align:center;font-weight:800;font-size:13px;${scoreClass}">${scoreText}</td>
+            <td style="text-align:right;font-weight:900;font-size:13px;color:#facc15;">${p.total_score}</td>
           </tr>`;
         }).join('');
       }
 
-      if (st.round_over_timer !== undefined && st.round_over_timer !== null && st.round_over_timer > 0) {
-        if (countTextEl) countTextEl.style.display = 'block';
-        if (countEl) countEl.textContent = Math.ceil(st.round_over_timer);
-      } else {
-        if (countTextEl) countTextEl.style.display = 'none';
-      }
+      if (countTextEl) countTextEl.style.display = 'none';
 
       if (btnNext) {
         btnNext.textContent = isMatchOver ? '🔄 MAIN LAGI / RESET MATCH' : '▶️ LANJUT KE RONDE BERIKUTNYA';
@@ -3279,6 +3412,70 @@ async function nextRoundNow() {
   await sendAction(isMatchOver ? 'START_GAME' : 'START_ROUND');
 }
 
+function openHistoryModal() {
+  const modal = document.getElementById('history-modal');
+  const body = document.getElementById('history-modal-body');
+  if (!modal || !body) return;
+  const history = (latestState && latestState.round_history) ? latestState.round_history : [];
+  if (history.length === 0) {
+    body.innerHTML = `
+      <div style="text-align:center; padding: 40px 16px; color:#94a3b8;">
+        <div style="font-size:36px; margin-bottom:10px;">📜</div>
+        <div style="font-size:15px; font-weight:700; color:#cbd5e1;">Belum Ada Riwayat Ronde Selesai</div>
+        <div style="font-size:12px; margin-top:6px; color:#64748b;">Riwayat lengkap skor dan susunan kartu setiap pemain akan otomatis dicatat setelah ronde berakhir.</div>
+      </div>
+    `;
+  } else {
+    body.innerHTML = history.slice().reverse().map(rh => {
+      const wCard = rh.wildcard_indicator ? `${rh.wildcard_indicator.rank}${rh.wildcard_indicator.suit || ''}` : '-';
+      const closerText = rh.closer_name ? `Penutup: <b>${rh.closer_name}</b>${rh.closed_by_tutup_tangan ? ' (🌟 Tutup Tangan +250)' : ' (Tutup Biasa)'}` : (rh.reason || 'Selesai');
+      return `
+        <div class="history-round-box">
+          <div class="history-round-header">
+            <div>🏁 RONDE ${rh.round_number} <span style="font-size:11px; color:#94a3b8; font-weight:normal; margin-left:8px;">${closerText}</span></div>
+            <div style="font-size:11.5px; color:#38bdf8;">WILD: <b>${wCard}</b></div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="standings-table" style="margin-bottom:0;">
+              <thead>
+                <tr>
+                  <th style="min-width: 120px;">Pemain</th>
+                  <th style="min-width: 220px;">Kartu Jadi (Melds)</th>
+                  <th style="min-width: 150px;">Sisa Kartu Tangan</th>
+                  <th style="text-align:center; min-width: 70px;">Ronde</th>
+                  <th style="text-align:right; min-width: 70px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(rh.players || []).map(p => {
+                  const isCloser = rh.closer_seat !== null && p.seat === rh.closer_seat;
+                  const rScore = p.round_score || 0;
+                  const scoreClass = rScore > 0 ? 'color:#4ade80;' : (rScore < 0 ? 'color:#f87171;' : 'color:#94a3b8;');
+                  const scoreText = rScore > 0 ? `+${rScore}` : `${rScore}`;
+                  const burnTag = p.burned ? ' <span style="color:#f87171;font-size:10px;">🔥TERBAKAR</span>' : '';
+                  return `<tr class="${isCloser ? 'winner-row' : ''}">
+                    <td style="font-weight:700;">${isCloser ? '👑 ' : ''}${p.name}${burnTag}</td>
+                    <td>${renderPlayerMeldsHTML(p.melds)}</td>
+                    <td>${renderPlayerHandHTML(p.hand, isCloser)}</td>
+                    <td style="text-align:center;font-weight:800;font-size:12.5px;${scoreClass}">${scoreText}</td>
+                    <td style="text-align:right;font-weight:900;font-size:12.5px;color:#facc15;">${p.total_score}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  modal.style.display = 'flex';
+}
+
+function closeHistoryModal() {
+  const modal = document.getElementById('history-modal');
+  if (modal) modal.style.display = 'none';
+}
+
 function spectateGame() {
   spectatorMode = true;
   const lobbyScreen = document.getElementById('lobby-screen');
@@ -3487,7 +3684,22 @@ function highlightPills(containerId, activeVal) {
 // Keyboard Shortcuts
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
-  if (e.key === 'Escape') togglePause();
+  if (e.key === 'Escape') {
+    const histModal = document.getElementById('history-modal');
+    if (histModal && histModal.style.display === 'flex') {
+      closeHistoryModal();
+      return;
+    }
+    togglePause();
+  }
+  else if (e.key === 'h' || e.key === 'H') {
+    const histModal = document.getElementById('history-modal');
+    if (histModal && histModal.style.display === 'flex') {
+      closeHistoryModal();
+    } else {
+      openHistoryModal();
+    }
+  }
   else if (e.key === 'p' || e.key === 'P') openDashboard();
   else if (e.key === 'd' || e.key === 'D') sendAction('DRAW_DECK');
   else if (e.key === 'm' || e.key === 'M') meldSelected();

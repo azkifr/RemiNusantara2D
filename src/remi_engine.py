@@ -487,7 +487,7 @@ class RemiGameMatch:
         self,
         room_code: str = "RM1500",
         num_players: int = 4,
-        turn_timer_sec: int = 25,
+        turn_timer_sec: int = 0,
         target_score: int = TARGET_WIN_SCORE,
         bot_delay_sec: float = 0.85,
     ):
@@ -524,6 +524,7 @@ class RemiGameMatch:
         self.status_message: str = "Di Dashboard / Lobby - Atur konfigurasi & klik 'MULAI PERMAINAN'!"
         self.turn_remaining_sec: float = float(self.turn_timer_sec) if self.turn_timer_sec > 0 else 999.0
         self.is_paused: bool = False
+        self.round_history: List[dict] = []
         # Pelacakan kartu buangan dan pembuangnya (untuk penalti umpan tutup x10)
         self.card_discarder: Dict[str, int] = {}
         self.turn_taken_discard_card: Optional[Card] = None
@@ -602,6 +603,7 @@ class RemiGameMatch:
         self.discard_pile = []
         self.phase = "LOBBY"
         self.is_paused = False
+        self.round_history = []
         self.status_message = "Match di-reset. Siap bermain dari Ronde 1!"
 
     def toggle_pause(self) -> Tuple[bool, str]:
@@ -848,88 +850,80 @@ class RemiGameMatch:
         #      akan MENUTUP KARTU pada giliran ini (dan dihitung sebagai Tutup Biasa, BUKAN Tutup Tangan Murni +250).
         #    - Selain itu (saat belum menutup kartu), Wild Card di tangan HANYA bisa ikut mengambil buangan jika
         #      Wild Card tersebut berfungsi sebagai REGULAR CARD sesuai angka & kembang Seri-nya (wildcards_as_substitute == 0).
-        others = list(player.hand)
+        hand_cards = list(player.hand)
+        other_taken = taken_cards[1:]
         valid_candidates: List[Tuple[int, int, int, int, int, List[Card], str]] = []
         saw_wildcard_substitute_without_close = False
-        has_seri_already = has_valid_seri_in_hand_or_melds(player, self.wildcard_rank)
-        saw_has_seri_without_close = False
 
-        for sz in range(2, min(len(others), 6) + 1):
-            for comb in combinations(others, sz):
-                cand = list(comb) + [target_card]
-                if len(combined_pool) - len(cand) < 1:
-                    continue
-                res = validate_meld(cand, wildcard_rank=self.wildcard_rank)
-                if not res.valid:
-                    continue
+        # Kombinasikan kartu dari tangan (comb_h min 2 kartu) dan kartu buangan lain yang ikut terambil (comb_t 0..3)
+        for t_sz in range(0, min(len(other_taken), 3) + 1):
+            for comb_t in combinations(other_taken, t_sz):
+                for h_sz in range(2, min(len(hand_cards), 6 - t_sz) + 1):
+                    for comb_h in combinations(hand_cards, h_sz):
+                        cand = [target_card] + list(comb_t) + list(comb_h)
+                        if len(cand) < 3:
+                            continue
+                        if len(combined_pool) - len(cand) < 1:
+                            continue
+                        res = validate_meld(cand, wildcard_rank=self.wildcard_rank)
+                        if not res.valid:
+                            continue
 
-                is_tris_ace = res.meld_type in ("TRIS_ACE", "KUARTET_ACE")
-                if not already_safe and not res.is_seri and not is_tris_ace:
-                    continue
+                        is_tris_ace = res.meld_type in ("TRIS_ACE", "KUARTET_ACE")
+                        if not already_safe and not res.is_seri and not is_tris_ace:
+                            continue
 
-                sub_wilds = res.wildcards_as_substitute
+                        sub_wilds = res.wildcards_as_substitute
 
-                # Khusus kartu As ('A') saat tidak menutup dengan wildcard: wajib minimal 2 kartu As asli di tangan
-                if target_card.rank == "A" and sub_wilds == 0:
-                    aces_in_comb = [c for c in comb if c.rank == "A"]
-                    if len(aces_in_comb) < 2:
-                        continue
+                        # Khusus kartu As ('A') saat tidak menutup dengan wildcard: wajib minimal 2 kartu As asli di tangan
+                        if target_card.rank == "A" and sub_wilds == 0:
+                            aces_in_comb = [c for c in comb_h if c.rank == "A"]
+                            if len(aces_in_comb) < 2:
+                                continue
 
-                cand_ids = {c.id for c in cand}
-                rem_pool = [c for c in combined_pool if c.id not in cand_ids]
-                can_close_now, _ = self._can_close_with_remaining_pool(
-                    player.melds,
-                    res.ordered_cards,
-                    rem_pool,
-                    forbidden_discard_id=forbidden_id,
-                )
+                        cand_ids = {c.id for c in cand}
+                        rem_pool = [c for c in combined_pool if c.id not in cand_ids]
+                        can_close_now, _ = self._can_close_with_remaining_pool(
+                            player.melds,
+                            res.ordered_cards,
+                            rem_pool,
+                            forbidden_discard_id=forbidden_id,
+                        )
 
-                # Jika sudah memiliki Seri di tangan/meja, mengambil buangan WAJIB langsung menutup ronde!
-                if has_seri_already and not can_close_now:
-                    saw_has_seri_without_close = True
-                    continue
+                        # Jika memakai Wild Card sebagai pengganti (bukan regular card dengan serinya),
+                        # WAJIB hanya boleh dilakukan saat pemain akan menutup kartu pada giliran ini!
+                        if sub_wilds > 0 and not can_close_now:
+                            saw_wildcard_substitute_without_close = True
+                            continue
 
-                # Jika memakai Wild Card sebagai pengganti (bukan regular card dengan serinya),
-                # WAJIB hanya boleh dilakukan saat pemain akan menutup kartu pada giliran ini!
-                if sub_wilds > 0 and not can_close_now:
-                    saw_wildcard_substitute_without_close = True
-                    continue
+                        hand_cards_used = len(comb_h)
+                        meld_sz = len(cand)
 
-                hand_cards_used = len(comb)
-                meld_sz = len(cand)
+                        rem_melds, rem_dead = find_best_melds_in_hand(
+                            rem_pool,
+                            wildcard_rank=self.wildcard_rank,
+                            already_has_seri=already_safe or res.is_seri or is_tris_ace,
+                        )
+                        total_meld_pts = res.points + sum(
+                            validate_meld(m, wildcard_rank=self.wildcard_rank).points for m in rem_melds
+                        )
+                        total_dead_penalty = sum(
+                            c.get_deadwood_penalty(self.wildcard_rank) for c in rem_dead
+                        )
+                        can_close_bonus = 1000 if can_close_now else (500 if len(rem_dead) <= 1 else 0)
+                        net_score = total_meld_pts - total_dead_penalty + can_close_bonus
 
-                rem_melds, rem_dead = find_best_melds_in_hand(
-                    rem_pool,
-                    wildcard_rank=self.wildcard_rank,
-                    already_has_seri=already_safe or res.is_seri or is_tris_ace,
-                )
-                total_meld_pts = res.points + sum(
-                    validate_meld(m, wildcard_rank=self.wildcard_rank).points for m in rem_melds
-                )
-                total_dead_penalty = sum(
-                    c.get_deadwood_penalty(self.wildcard_rank) for c in rem_dead
-                )
-                can_close_bonus = 1000 if can_close_now else (500 if len(rem_dead) <= 1 else 0)
-                net_score = total_meld_pts - total_dead_penalty + can_close_bonus
-
-                valid_candidates.append((
-                    sub_wilds,
-                    0 if can_close_now else 1,
-                    -net_score,
-                    -meld_sz,
-                    -hand_cards_used,
-                    res.ordered_cards,
-                    res.meld_type,
-                ))
+                        valid_candidates.append((
+                            sub_wilds,
+                            0 if can_close_now else 1,
+                            -net_score,
+                            -meld_sz,
+                            -hand_cards_used,
+                            res.ordered_cards,
+                            res.meld_type,
+                        ))
 
         if not valid_candidates:
-            if saw_has_seri_without_close:
-                return (
-                    False,
-                    f"Karena Anda sudah memiliki Kartu Seri di tangan/meja, mengambil kartu buangan {target_card.id} "
-                    f"hanya diperbolehkan jika langsung dapat MENUTUP RONDE (Wajib Langsung Nutup)!",
-                    None,
-                )
             if saw_wildcard_substitute_without_close:
                 return (
                     False,
@@ -1024,6 +1018,20 @@ class RemiGameMatch:
             cand_from_hand = [c for c in player.hand if c.id in id_set]
             cand = cand_from_hand + [target_card]
             val = validate_meld(cand, wildcard_rank=self.wildcard_rank)
+            # Jika belum valid hanya dengan kartu tangan + target, cek kombinasi dengan kartu buangan lain yang ikut terambil
+            if not val.valid and len(taken_cards) > 1:
+                other_taken = taken_cards[1:]
+                for t_sz in range(1, min(len(other_taken), 3) + 1):
+                    for comb_t in combinations(other_taken, t_sz):
+                        test_cand = [target_card] + list(comb_t) + cand_from_hand
+                        test_val = validate_meld(test_cand, wildcard_rank=self.wildcard_rank)
+                        if test_val.valid:
+                            val = test_val
+                            cand = test_cand
+                            break
+                    if val.valid:
+                        break
+
             if val.valid:
                 is_tris_ace = val.meld_type in ("TRIS_ACE", "KUARTET_ACE")
                 if not already_safe and not val.is_seri and not is_tris_ace:
@@ -1062,7 +1070,6 @@ class RemiGameMatch:
                 return False, msg
             chosen_meld = auto_meld
 
-        had_seri_before_take = has_valid_seri_in_hand_or_melds(player, self.wildcard_rank)
         self.melds_count_at_turn_start = len(player.melds)
         del self.discard_pile[discard_index:]
         player.hand = combined_pool
@@ -1072,7 +1079,7 @@ class RemiGameMatch:
         player.sort_hand()
 
         val_chosen = validate_meld(chosen_meld, wildcard_rank=self.wildcard_rank)
-        self.must_close_this_turn = (had_seri_before_take or val_chosen.wildcards_as_substitute > 0)
+        self.must_close_this_turn = (val_chosen.wildcards_as_substitute > 0)
         self.forbidden_discard_card_id = forbidden_id
         self.turn_taken_discard_card = target_card
         self.turn_taken_discarder_seat = self.card_discarder.get(target_card.id)
@@ -1647,6 +1654,30 @@ class RemiGameMatch:
                 "total_score": p.total_score,
             }
 
+        # Simpan riwayat lengkap ronde (skor, kartu jadi, dan sisa tangan)
+        round_entry = {
+            "round_number": self.round_number,
+            "closer_seat": closer_seat,
+            "closer_name": self.players[closer_seat].name if closer_seat is not None else None,
+            "closed_by_tutup_tangan": self.round_closed_by_tutup_tangan,
+            "wildcard_indicator": self.wildcard_indicator_card.to_dict(self.wildcard_rank) if self.wildcard_indicator_card else None,
+            "reason": reason,
+            "players": [
+                {
+                    "seat": p.seat,
+                    "name": p.name,
+                    "round_score": p.last_round_score,
+                    "total_score": p.total_score,
+                    "burned": p.burned_last_round,
+                    "breakdown": dict(p.last_round_breakdown),
+                    "melds": [[c.to_dict(self.wildcard_rank) for c in m] for m in p.melds],
+                    "hand": [c.to_dict(self.wildcard_rank) for c in p.hand],
+                }
+                for p in self.players
+            ],
+        }
+        self.round_history.append(round_entry)
+
         # Aturan Baru: Pemain yang memiliki total skor tertinggi yang akan main terus menerus (mulai pertama di setiap ronde)!
         # Jika skor seri / sama, starter yang sedang memegang giliran tetap dipertahankan.
         if closer_seat is not None:
@@ -1669,13 +1700,14 @@ class RemiGameMatch:
             winner = max(eligible_winners, key=lambda p: p.total_score)
             self.match_winner_seat = winner.seat
             self.phase = "MATCH_OVER"
+            self.round_over_timer = None
             self.status_message = (
                 f"[JUARA] PERTANDINGAN SELESAI! {winner.name} menang dengan skor {winner.total_score} / {self.target_score} Poin! ({reason})"
             )
         else:
             self.phase = "ROUND_OVER"
-            self.round_over_timer = 5.0
-            self.status_message = f"Akhir Ronde {self.round_number}: {reason}{next_starter_msg} (Ronde berikutnya dimulai otomatis dalam 5 detik...)"
+            self.round_over_timer = None
+            self.status_message = f"Akhir Ronde {self.round_number}: {reason}{next_starter_msg}"
 
     # ------------------------------------------------------------------
     # AI Bot Pintar & Auto-Action saat Turn Timeout
@@ -1815,6 +1847,7 @@ class RemiGameMatch:
             "turn_remaining_sec": round(self.turn_remaining_sec, 1),
             "is_paused": getattr(self, "is_paused", False),
             "round_over_timer": round(self.round_over_timer, 1) if getattr(self, "round_over_timer", None) is not None else None,
+            "round_history": getattr(self, "round_history", []),
             "players": [
                 {
                     "seat": p.seat,

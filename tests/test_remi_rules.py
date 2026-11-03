@@ -630,32 +630,39 @@ def test_dashboard_match_configuration_and_timer_settings():
     print("[PASS] Dashboard Match Configuration & Timer Settings Lulus 100%!")
 
 
-def test_auto_next_round_countdown_5_seconds():
+def test_no_round_timer_and_round_history_recording():
     """
     Menguji Aturan Baru:
-    - Tidak ada tombol Next Round yang bisa kepencet sembarangan.
-    - Saat ronde selesai (ROUND_OVER), sistem mengeset countdown 5 detik (round_over_timer = 5.0).
-    - Ketika countdown habis (round_over_timer <= 0), ronde berikutnya otomatis dimulai!
+    - Hilangkan timer auto-countdown (round_over_timer = None) agar pemain dapat meninjau hasil skor & kartu dengan santai.
+    - Setiap akhir ronde, detail kartu jadi (melds), sisa tangan (deadwood), dan perolehan skor tersimpan rapi di round_history.
     """
-    game = RemiGameMatch(num_players=4)
+    game = RemiGameMatch(num_players=4, turn_timer_sec=0)
+    assert game.turn_timer_sec == 0
     game.start_new_round(seed=1)
     assert game.phase == 'TURN_DRAW'
 
     # Selesaikan ronde 1 (Pak habis)
     game._finish_round(closer_seat=None, is_tutup_tangan=False, reason='Pak kartu habis')
     assert game.phase == 'ROUND_OVER'
-    assert game.round_over_timer == 5.0
+    assert game.round_over_timer is None, "Timer ronde selesai harus None (tanpa auto-countdown paksa)!"
 
-    # Simulasi status countdown
-    st = game.to_state_dict()
-    assert st['round_over_timer'] == 5.0
+    # Riwayat permainan tersimpan lengkap
+    assert len(game.round_history) == 1
+    rh = game.round_history[0]
+    assert rh['round_number'] == 1
+    assert len(rh['players']) == 4
+    for rp in rh['players']:
+        assert 'melds' in rp
+        assert 'hand' in rp
+        assert 'round_score' in rp
+        assert 'total_score' in rp
 
-    # Ketika timer habis -> panggil start_new_round otomatis
+    # Panggil ronde berikutnya secara manual via tombol
     game.start_new_round(seed=2)
     assert game.phase == 'TURN_DRAW'
     assert game.round_number == 2
     assert game.round_over_timer is None
-    print('[PASS] Auto Next Round Countdown 5 Detik Lulus 100%!')
+    print('[PASS] Tanpa Auto Timer & Riwayat Ronde Tercatat Lengkap Lulus 100%!')
 
 
 def test_closing_after_taking_discard_is_not_250_but_tutup_biasa():
@@ -1106,6 +1113,58 @@ def test_take_discard_min_2_cards_in_hand_and_wildcard_rules():
     print("[PASS] Aturan ambil buangan min 2 kartu di tangan & aturan Wild Card (regular seri vs tutup kartu) Lulus 100%!")
 
 
+def test_take_discard_combining_multi_discard_cards_and_seri_allowed():
+    """
+    Menguji skenario tangkapan layar user:
+    - Pemain sudah memiliki Tris As di meja (SERI WAJIB AMAN).
+    - Tumpukan buangan: [7H, 8H, 2S, QS, 3H, 2H, 5H].
+    - Di tangan pemain ada: 9H, 10H, KH, 6C, JH.
+    - Pemain mengambil kartu 7H (index 0) yang juga ikut menarik 8H.
+    - Sistem berhasil mengombinasikan 7H (target) + 8H (kartu buangan lain yang ikut terambil) + 9H, 10H (dari tangan)
+      menjadi Seri sah [7H, 8H, 9H, 10H]!
+    - Pemain yang sudah punya seri diperbolehkan mengambil kartu buangan tanpa wajib langsung nutup!
+    """
+    game = RemiGameMatch(num_players=4)
+    game.start_new_round(seed=12)
+    game.wildcard_rank = "J"
+
+    p0 = game.players[0]
+    p0.melds = [[Card.from_id("AS"), Card.from_id("AH"), Card.from_id("AD")]]
+    p0.hand = [
+        Card.from_id("KH"),
+        Card.from_id("6C"),
+        Card.from_id("9H"),
+        Card.from_id("10H"),
+        Card.from_id("JH"),
+    ]
+    game.discard_pile = [
+        Card.from_id("7H"),
+        Card.from_id("8H"),
+        Card.from_id("2S"),
+        Card.from_id("QS"),
+        Card.from_id("3H"),
+        Card.from_id("2H"),
+        Card.from_id("5H"),
+    ]
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+
+    ok, msg, auto_meld = game.can_take_discard(0, 0)
+    assert ok, f"Ambil 7H harus berhasil: {msg}"
+    assert auto_meld is not None
+    auto_ids = [c.id for c in auto_meld]
+    assert "7H" in auto_ids and "8H" in auto_ids and "9H" in auto_ids and "10H" in auto_ids
+
+    # Eksekusi take_from_discard
+    ok_take, msg_take = game.take_from_discard(0, 0)
+    assert ok_take, f"Gagal take_from_discard: {msg_take}"
+    assert len(p0.melds) == 2
+    assert [c.id for c in p0.melds[1]] == ["7H", "8H", "9H", "10H"]
+    assert game.must_close_this_turn is False, "Sudah punya seri tidak dipaksa wajib tutup!"
+
+    print("[PASS] Ambil 7H gabung dengan 8H (buangan) + 9H, 10H (tangan) & Seri bebas ambil buangan Lulus 100%!")
+
+
 if __name__ == "__main__":
     test_deck_53_and_4_wildcards_from_first_card()
     test_3_tier_separation_rules()
@@ -1120,7 +1179,7 @@ if __name__ == "__main__":
     test_taking_discard_avoids_consuming_wildcard_from_hand()
     test_highest_score_player_starts_and_main_terus()
     test_dashboard_match_configuration_and_timer_settings()
-    test_auto_next_round_countdown_5_seconds()
+    test_no_round_timer_and_round_history_recording()
     test_closing_after_taking_discard_is_not_250_but_tutup_biasa()
     test_discarded_wildcards_cannot_be_taken_by_other_players()
     test_take_discard_forms_full_sequence_7_to_10()
@@ -1129,4 +1188,5 @@ if __name__ == "__main__":
     test_discard_keeps_cards_in_hand_until_auto_meld_clicked()
     test_pure_tutup_tangan_freezes_other_players_scores_to_zero()
     test_take_discard_min_2_cards_in_hand_and_wildcard_rules()
+    test_take_discard_combining_multi_discard_cards_and_seri_allowed()
     print("\nSEMUA UNIT TEST REMI INDONESIA v3.5 LULUS 100%!")
