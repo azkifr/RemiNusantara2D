@@ -1165,6 +1165,79 @@ def test_take_discard_combining_multi_discard_cards_and_seri_allowed():
     print("[PASS] Ambil 7H gabung dengan 8H (buangan) + 9H, 10H (tangan) & Seri bebas ambil buangan Lulus 100%!")
 
 
+def test_bot_and_player_cannot_meld_wildcard_substitute_without_closing():
+    # Setup game
+    game = RemiGameMatch(["Bot Siti", "AYB"])
+    game.start_new_round()
+    game.wildcard_rank = "5"
+    p0 = game.players[0]
+
+    # Kasus 1: Bot Siti punya [AH, AD, AC] di meja, tangan: [JS, QS, 5H (Wild)] + [8D, 3C] (2 deadwood)
+    p0.melds = [[Card("AH", "A", "H"), Card("AD", "A", "D"), Card("AC", "A", "C")]]
+    p0.hand = [
+        Card("JS", "J", "S"),
+        Card("QS", "Q", "S"),
+        Card("5H", "5", "H"),
+        Card("8D", "8", "D"),
+        Card("3C", "3", "C"),
+    ]
+    game.current_turn_seat = 0
+    game.phase = "TURN_MELD_DISCARD"
+
+    # Verifikasi manual meld ditolak
+    ok_meld, msg_meld = game.meld_from_hand(0, ["JS", "QS", "5H"])
+    assert not ok_meld, f"Meld wildcard substitute tanpa tutup harus ditolak! {msg_meld}"
+    assert "Wild Card pengganti hanya boleh diturunkan saat Anda langsung menutup kartu" in msg_meld
+
+    # Verifikasi auto_meld_all_valid tidak menurunkan JS, QS, 5H
+    ok_auto, msg_auto = game.auto_meld_all_valid(0)
+    assert len(p0.melds) == 1, "Melds di meja tidak boleh bertambah!"
+    assert len(p0.hand) == 5, "Semua kartu harus tetap di tangan!"
+
+    # Verifikasi giliran bot: buang 1 kartu mati (bukan wild) dan simpan JS, QS, 5H di tangan
+    msg_bot = game.execute_bot_or_timeout_step(0)
+    assert len(p0.melds) == 1, "Bot tidak boleh menurunkan kombinasi wildcard substitute ke meja!"
+    assert any(c.id == "5H" for c in p0.hand), "5H (Wild) harus tetap aman di tangan bot!"
+    assert any(c.id == "JS" for c in p0.hand) and any(c.id == "QS" for c in p0.hand)
+    assert len(p0.hand) == 4, f"Bot harus buang 1 kartu mati, tersisa 4 kartu di tangan: {[c.id for c in p0.hand]}"
+    assert game.phase == "TURN_DRAW", "Giliran harus berpindah ke pemain berikutnya"
+
+    # Kasus 2: Pemain bisa menutup kartu (tangan sisa 1 kartu buang setelah JS, QS, 5H turun)
+    game.current_turn_seat = 0
+    game.phase = "TURN_MELD_DISCARD"
+    p0.hand = [
+        Card("JS", "J", "S"),
+        Card("QS", "Q", "S"),
+        Card("5H", "5", "H"),
+        Card("3C", "3", "C"),
+    ]
+    can_close, is_tt, cid = game.check_can_close_round(0)
+    assert can_close, "Harus bisa menutup kartu!"
+    assert cid == "3C", f"Kartu penutup harus 3C, tapi dapat {cid}"
+
+    # Eksekusi bot saat bisa tutup: harus berhasil tutup kartu
+    game.execute_bot_or_timeout_step(0)
+    assert game.phase == "ROUND_OVER", "Permainan harus selesai/tutup ronde!"
+    assert len(p0.melds) == 2, "Kombinasi JS-QS-5H harus sah turun saat menutup ronde!"
+
+    # Kasus 3: Wildcard dipakai sebagai kartu regular/natural (bukan pengganti), boleh turun tanpa tutup
+    game.phase = "TURN_MELD_DISCARD"
+    game.current_turn_seat = 0
+    p0.melds = [[Card("AH", "A", "H"), Card("AD", "A", "D"), Card("AC", "A", "C")]]
+    p0.hand = [
+        Card("4S", "4", "S"),
+        Card("5S", "5", "S"),
+        Card("6S", "6", "S"),
+        Card("8D", "8", "D"),
+        Card("3C", "3", "C"),
+    ]
+    ok_nat, msg_nat = game.meld_from_hand(0, ["4S", "5S", "6S"])
+    assert ok_nat, f"Natural wildcard meld harus diizinkan: {msg_nat}"
+    assert len(p0.melds) == 2
+
+    print("[PASS] Bot dan pemain dilarang menurunkan kombinasi Wild Card pengganti tanpa menutup kartu Lulus 100%!")
+
+
 if __name__ == "__main__":
     test_deck_53_and_4_wildcards_from_first_card()
     test_3_tier_separation_rules()
@@ -1189,4 +1262,5 @@ if __name__ == "__main__":
     test_pure_tutup_tangan_freezes_other_players_scores_to_zero()
     test_take_discard_min_2_cards_in_hand_and_wildcard_rules()
     test_take_discard_combining_multi_discard_cards_and_seri_allowed()
+    test_bot_and_player_cannot_meld_wildcard_substitute_without_closing()
     print("\nSEMUA UNIT TEST REMI INDONESIA v3.5 LULUS 100%!")

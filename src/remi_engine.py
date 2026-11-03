@@ -351,6 +351,7 @@ def find_best_melds_in_hand(
     must_include: Optional[Card] = None,
     wildcard_rank: Optional[str] = None,
     already_has_seri: bool = False,
+    allow_wildcard_substitutes: bool = True,
 ) -> Tuple[List[List[Card]], List[Card]]:
     """
     Mencari susunan kombinasi sah terbaik dari kartu di tangan, dengan memprioritaskan
@@ -364,6 +365,9 @@ def find_best_melds_in_hand(
             comb_list = list(comb)
             res = validate_meld(comb_list, wildcard_rank=wildcard_rank)
             if res.valid:
+                # Jika allow_wildcard_substitutes=False, hanya terima kombinasi reguler murni (bukan pengganti wildcard)
+                if not allow_wildcard_substitutes and res.wildcards_as_substitute > 0:
+                    continue
                 saved_deadwood = sum(c.get_deadwood_penalty(wildcard_rank) for c in comb_list)
                 # Wild Card sangat berharga untuk disimpan di tangan (fleksibilitas & potensi Tutup Tangan).
                 # Beri penalti jika mengonsumsi Wild Card agar kombinasi natural (0 Wild Card) selalu diprioritaskan!
@@ -1114,6 +1118,21 @@ class RemiGameMatch:
         # 1. Coba sebagai kombinasi baru berdiri sendiri (>= 3 kartu)
         val = validate_meld(selected, wildcard_rank=self.wildcard_rank)
         if val.valid:
+            # Aturan Wild Card: Jika memakai Wild Card sebagai pengganti (wildcards_as_substitute > 0),
+            # HANYA boleh diturunkan saat pemain langsung menutup kartu (Tutup) pada giliran ini!
+            if val.wildcards_as_substitute > 0:
+                rem_pool = [c for c in player.hand if c.id not in id_set]
+                can_close_now, _ = self._can_close_with_remaining_pool(
+                    player.melds,
+                    val.ordered_cards,
+                    rem_pool,
+                )
+                if not can_close_now:
+                    return (
+                        False,
+                        "Kombinasi dengan Wild Card pengganti hanya boleh diturunkan saat Anda langsung menutup kartu (Tutup)!",
+                    )
+
             # Syarat buka meja / turun kartu:
             # Jika belum punya Seri atau Tris As di meja, kombinasi yang diturunkan haruslah Seri atau Tris As!
             if not already_safe:
@@ -1138,6 +1157,15 @@ class RemiGameMatch:
                 test_meld = existing_meld + selected
                 val_ext = validate_meld(test_meld, wildcard_rank=self.wildcard_rank)
                 if val_ext.valid:
+                    if any(c.is_wildcard(self.wildcard_rank) for c in selected):
+                        rem_pool = [c for c in player.hand if c.id not in id_set]
+                        can_close_now, _ = self._can_close_with_remaining_pool(
+                            [m for i, m in enumerate(player.melds) if i != m_idx] + [val_ext.ordered_cards],
+                            None,
+                            rem_pool,
+                        )
+                        if not can_close_now:
+                            continue
                     player.hand = [c for c in player.hand if c.id not in id_set]
                     player.melds[m_idx] = val_ext.ordered_cards
                     meld_str = "-".join(c.id for c in val_ext.ordered_cards)
@@ -1154,10 +1182,12 @@ class RemiGameMatch:
 
         player = self.players[seat]
         already_safe = has_valid_seri_or_ace_meld(player.melds, self.wildcard_rank)
+        can_close_full, _, _ = self.check_can_close_round(seat)
         melds, rem = find_best_melds_in_hand(
             player.hand,
             wildcard_rank=self.wildcard_rank,
             already_has_seri=already_safe,
+            allow_wildcard_substitutes=can_close_full,
         )
 
         if not already_safe and melds:
@@ -1203,6 +1233,9 @@ class RemiGameMatch:
                 for c in list(player.hand):
                     if len(player.hand) < 2:
                         break
+                    # Jangan sambung Wild Card sebagai pengganti jika belum menutup kartu!
+                    if c.is_wildcard(self.wildcard_rank) and not can_close_full:
+                        continue
                     for m_idx in range(len(player.melds)):
                         test_m = player.melds[m_idx] + [c]
                         val_m = validate_meld(test_m, wildcard_rank=self.wildcard_rank)
@@ -1429,11 +1462,11 @@ class RemiGameMatch:
         # Jika pemain mengambil buangan menggunakan Wild Card pengganti pada giliran ini,
         # pemain WAJIB menutup kartu pada giliran ini!
         if getattr(self, "must_close_this_turn", False) and not can_close:
-            if can_close_round and closing_cid:
-                return (
-                    False,
-                    f"Karena Anda mengambil buangan dengan Wild Card pengganti, Anda WAJIB menutup kartu pada giliran ini! Buang kartu {closing_cid} untuk menutup kartu.",
-                )
+            return (
+                False,
+                f"Karena Anda mengambil buangan dengan Wild Card pengganti, Anda WAJIB menutup kartu pada giliran ini!"
+                + (f" Buang kartu {closing_cid} untuk menutup kartu." if (can_close_round and closing_cid) else ""),
+            )
 
         if can_close and other_cards:
             player.melds = combined_melds
@@ -1730,6 +1763,21 @@ class RemiGameMatch:
             for idx in range(total_disc - 1, min_idx - 1, -1):
                 ok, _, req_meld = self.can_take_discard(active_seat, idx)
                 if ok and req_meld:
+                    val_req = validate_meld(req_meld, wildcard_rank=self.wildcard_rank)
+                    if val_req.wildcards_as_substitute > 0:
+                        taken = self.discard_pile[idx:]
+                        cand_ids = {c.id for c in req_meld}
+                        rem_pool = [c for c in (player.hand + taken) if c.id not in cand_ids]
+                        forbidden_id = self.discard_pile[idx].id if len(taken) == 1 else None
+                        can_close_now, _ = self._can_close_with_remaining_pool(
+                            player.melds,
+                            val_req.ordered_cards,
+                            rem_pool,
+                            forbidden_discard_id=forbidden_id,
+                        )
+                        if not can_close_now:
+                            continue
+
                     taken = self.discard_pile[idx:]
                     pool = player.hand + taken
                     melds, rem = find_best_melds_in_hand(
@@ -1767,15 +1815,18 @@ class RemiGameMatch:
                 player.hand,
                 wildcard_rank=self.wildcard_rank,
                 already_has_seri=already_seri,
+                allow_wildcard_substitutes=can_close_round,
             )
             # Bot menyimpan kartu di tangan jika belum pernah turun & berpeluang Tutup Tangan (+250),
             # atau langsung turun jika sudah pernah ambil buangan
             if melds and (len(rem) <= 1 or len(player.melds) > 0):
                 self.auto_meld_all_valid(active_seat)
+                can_close_round, _, _ = self.check_can_close_round(active_seat)
                 _, rem = find_best_melds_in_hand(
                     player.hand,
                     wildcard_rank=self.wildcard_rank,
                     already_has_seri=has_valid_seri_meld(player.melds, self.wildcard_rank),
+                    allow_wildcard_substitutes=can_close_round,
                 )
 
             can_close_round, _, closing_cid = self.check_can_close_round(active_seat)
@@ -1787,6 +1838,7 @@ class RemiGameMatch:
                 player.hand,
                 wildcard_rank=self.wildcard_rank,
                 already_has_seri=has_valid_seri_or_ace_meld(player.melds, self.wildcard_rank),
+                allow_wildcard_substitutes=can_close_round,
             )
             candidates = deadwood if deadwood else list(player.hand)
             if self.forbidden_discard_card_id and len(candidates) > 1:
