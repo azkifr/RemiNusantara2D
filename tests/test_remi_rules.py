@@ -1053,11 +1053,11 @@ def test_take_discard_min_2_cards_in_hand_and_wildcard_rules():
     ok_two_cards, msg_two_cards, _ = game.can_take_discard(0, 0)
     assert ok_two_cards, f"Harus BISA ambil 7S karena punya 2 kartu (5S, 6S) di tangan: {msg_two_cards}"
 
-    # --- SKENARIO 2: Wild Card sebagai Regular Card dengan serinya sendiri (2S + 3S(Wild) ambil 4S) ---
+    # --- SKENARIO 2: Wild Card TIDAK BOLEH digunakan untuk ambil buangan jika belum menutup kartu ---
     p0.melds = []
     p0.hand = [
         Card.from_id("2S"),
-        Card.from_id("3S"),  # 3S adalah Wild Card ('3'), tetapi kembang S dan angka 3 pas di Seri 2S-3S-4S!
+        Card.from_id("3S"),  # 3S adalah Wild Card ('3')
         Card.from_id("9H"),
         Card.from_id("KD"),
         Card.from_id("AC"),
@@ -1065,9 +1065,9 @@ def test_take_discard_min_2_cards_in_hand_and_wildcard_rules():
     game.discard_pile = [Card.from_id("4S")]
     game.phase = "TURN_DRAW"
 
-    ok_nat_wild, msg_nat_wild, req_meld = game.can_take_discard(0, 0)
-    assert ok_nat_wild, f"Harus BISA ambil 4S karena 3S berperan sebagai regular card pada serinya (2S-3S-4S): {msg_nat_wild}"
-    assert [c.id for c in req_meld] == ["2S", "3S", "4S"], f"Urutan seri harus 2S-3S-4S, didapat {[c.id for c in req_meld]}"
+    ok_nat_wild, msg_nat_wild, _ = game.can_take_discard(0, 0)
+    assert not ok_nat_wild, f"Dilarang mengambil buangan dengan Wild Card 3S jika belum menutup kartu: {msg_nat_wild}"
+    assert "Wild Card" in msg_nat_wild
 
     # Sebaliknya, jika di tangan punya 2S dan 3H (Wild Card beda kembang) dan belum menutup kartu -> HARUS DITOLAK!
     p0.hand = [
@@ -1187,7 +1187,7 @@ def test_bot_and_player_cannot_meld_wildcard_substitute_without_closing():
     # Verifikasi manual meld ditolak
     ok_meld, msg_meld = game.meld_from_hand(0, ["JS", "QS", "5H"])
     assert not ok_meld, f"Meld wildcard substitute tanpa tutup harus ditolak! {msg_meld}"
-    assert "Wild Card pengganti hanya boleh diturunkan saat Anda langsung menutup kartu" in msg_meld
+    assert "Wild Card hanya boleh diturunkan saat Anda langsung menutup kartu" in msg_meld
 
     # Verifikasi auto_meld_all_valid tidak menurunkan JS, QS, 5H
     ok_auto, msg_auto = game.auto_meld_all_valid(0)
@@ -1220,7 +1220,7 @@ def test_bot_and_player_cannot_meld_wildcard_substitute_without_closing():
     assert game.phase == "ROUND_OVER", "Permainan harus selesai/tutup ronde!"
     assert len(p0.melds) == 2, "Kombinasi JS-QS-5H harus sah turun saat menutup ronde!"
 
-    # Kasus 3: Wildcard dipakai sebagai kartu regular/natural (bukan pengganti), boleh turun tanpa tutup
+    # Kasus 3: Wildcard apapun (meskipun angka natural) dilarang turun tanpa menutup kartu
     game.phase = "TURN_MELD_DISCARD"
     game.current_turn_seat = 0
     p0.melds = [[Card("AH", "A", "H"), Card("AD", "A", "D"), Card("AC", "A", "C")]]
@@ -1232,10 +1232,46 @@ def test_bot_and_player_cannot_meld_wildcard_substitute_without_closing():
         Card("3C", "3", "C"),
     ]
     ok_nat, msg_nat = game.meld_from_hand(0, ["4S", "5S", "6S"])
-    assert ok_nat, f"Natural wildcard meld harus diizinkan: {msg_nat}"
+    assert not ok_nat, f"Kombinasi mengandung Wild Card 5S harus ditolak: {msg_nat}"
+    assert "Wild Card" in msg_nat
+    assert len(p0.melds) == 1
+
+    # Kombinasi murni tanpa Wild Card boleh turun normal
+    p0.hand = [
+        Card("7S", "7", "S"),
+        Card("8S", "8", "S"),
+        Card("9S", "9", "S"),
+        Card("8D", "8", "D"),
+        Card("3C", "3", "C"),
+    ]
+    ok_pure, msg_pure = game.meld_from_hand(0, ["7S", "8S", "9S"])
+    assert ok_pure, f"Kombinasi murni tanpa Wild Card harus diizinkan: {msg_pure}"
     assert len(p0.melds) == 2
 
-    print("[PASS] Bot dan pemain dilarang menurunkan kombinasi Wild Card pengganti tanpa menutup kartu Lulus 100%!")
+    # Kasus 4: Screenshot pengguna - Wild Card = 6, tangan memiliki [3S, 4S, 5S, 6S(Wild)]
+    game.phase = "TURN_MELD_DISCARD"
+    game.current_turn_seat = 0
+    game.wildcard_rank = "6"
+    p0.melds = []
+    p0.hand = [
+        Card("3S", "3", "S"),
+        Card("4S", "4", "S"),
+        Card("5S", "5", "S"),
+        Card("6S", "6", "S"),
+        Card("8D", "8", "D"),
+        Card("9C", "9", "C"),
+    ]
+    # Meld manual yang memasukkan 6S (Wild) harus ditolak karena tidak menutup kartu
+    ok_user, msg_user = game.meld_from_hand(0, ["3S", "4S", "5S", "6S"])
+    assert not ok_user, f"Meld dengan 6S (Wild) harus ditolak: {msg_user}"
+
+    # Auto meld hanya boleh menurunkan kombinasi murni 3S-4S-5S dan 6S (Wild) WAJIB tetap di tangan
+    ok_auto, msg_auto = game.auto_meld_all_valid(0)
+    for m in p0.melds:
+        assert not any(c.id == "6S" for c in m), "6S (Wild) tidak boleh ada di meja!"
+    assert any(c.id == "6S" for c in p0.hand), "6S (Wild) harus tetap aman tersimpan di tangan!"
+
+    print("[PASS] Bot dan pemain dilarang menurunkan kombinasi Wild Card ke meja tanpa menutup kartu Lulus 100%!")
 
 
 if __name__ == "__main__":
