@@ -365,8 +365,8 @@ def find_best_melds_in_hand(
             comb_list = list(comb)
             res = validate_meld(comb_list, wildcard_rank=wildcard_rank)
             if res.valid:
-                # Jika allow_wildcard_substitutes=False, dilarang menggunakan kartu Wild Card / Joker apapun
-                if not allow_wildcard_substitutes and any(c.is_wildcard(wildcard_rank) for c in comb_list):
+                # Jika allow_wildcard_substitutes=False, hanya terima kombinasi reguler murni (bukan pengganti wildcard)
+                if not allow_wildcard_substitutes and res.wildcards_as_substitute > 0:
                     continue
                 saved_deadwood = sum(c.get_deadwood_penalty(wildcard_rank) for c in comb_list)
                 # Wild Card sangat berharga untuk disimpan di tangan (fleksibilitas & potensi Tutup Tangan).
@@ -877,10 +877,10 @@ class RemiGameMatch:
                         if not already_safe and not res.is_seri and not is_tris_ace:
                             continue
 
-                        cand_has_wild = any(c.is_wildcard(self.wildcard_rank) for c in cand)
+                        sub_wilds = res.wildcards_as_substitute
 
                         # Khusus kartu As ('A') saat tidak menutup dengan wildcard: wajib minimal 2 kartu As asli di tangan
-                        if target_card.rank == "A" and not cand_has_wild:
+                        if target_card.rank == "A" and sub_wilds == 0:
                             aces_in_comb = [c for c in comb_h if c.rank == "A"]
                             if len(aces_in_comb) < 2:
                                 continue
@@ -894,9 +894,9 @@ class RemiGameMatch:
                             forbidden_discard_id=forbidden_id,
                         )
 
-                        # Jika memakai Wild Card / Joker dalam kombinasi,
+                        # Jika memakai Wild Card sebagai pengganti (bukan regular card dengan serinya),
                         # WAJIB hanya boleh dilakukan saat pemain akan menutup kartu pada giliran ini!
-                        if cand_has_wild and not can_close_now:
+                        if sub_wilds > 0 and not can_close_now:
                             saw_wildcard_substitute_without_close = True
                             continue
 
@@ -907,7 +907,6 @@ class RemiGameMatch:
                             rem_pool,
                             wildcard_rank=self.wildcard_rank,
                             already_has_seri=already_safe or res.is_seri or is_tris_ace,
-                            allow_wildcard_substitutes=can_close_now,
                         )
                         total_meld_pts = res.points + sum(
                             validate_meld(m, wildcard_rank=self.wildcard_rank).points for m in rem_melds
@@ -919,7 +918,7 @@ class RemiGameMatch:
                         net_score = total_meld_pts - total_dead_penalty + can_close_bonus
 
                         valid_candidates.append((
-                            1 if cand_has_wild else 0,
+                            sub_wilds,
                             0 if can_close_now else 1,
                             -net_score,
                             -meld_sz,
@@ -932,7 +931,8 @@ class RemiGameMatch:
             if saw_wildcard_substitute_without_close:
                 return (
                     False,
-                    f"Kartu buangan {target_card.id} hanya bisa diambil dengan Wild Card saat Anda akan menutup kartu (Tutup Biasa)!",
+                    f"Kartu buangan {target_card.id} hanya bisa diambil dengan Wild Card saat Anda akan menutup kartu "
+                    f"(Tutup Biasa), atau jika Wild Card tersebut berfungsi sebagai kartu biasa (regular card) dengan serinya!",
                     None,
                 )
             if target_card.rank == "A":
@@ -955,7 +955,7 @@ class RemiGameMatch:
                 None,
             )
 
-        # Prioritaskan kombinasi regular (0 Wild Card), lalu yang bisa langsung tutup, lalu net_score & panjang seri
+        # Prioritaskan kombinasi regular (sub_wilds == 0), lalu yang bisa langsung tutup, lalu net_score & panjang seri
         regular_candidates = [c for c in valid_candidates if c[0] == 0]
         if regular_candidates:
             regular_candidates.sort(key=lambda x: (x[1], x[2], x[3], x[4]))
@@ -963,7 +963,7 @@ class RemiGameMatch:
             seri_str = "Seri" if "SERI" in chosen[6] else chosen[6]
             return True, f"Kartu {target_card.id} dapat diambil dan langsung turun sebagai {seri_str}!", chosen[5]
 
-        # Hanya tersisa kandidat yang menggunakan Wild Card untuk langsung MENUTUP KARTU (Tutup Biasa)
+        # Hanya tersisa kandidat yang menggunakan Wild Card sebagai pengganti untuk langsung MENUTUP KARTU (Tutup Biasa)
         valid_candidates.sort(key=lambda x: (x[0], x[1], x[2], x[3], x[4]))
         chosen = valid_candidates[0]
         return (
@@ -1048,7 +1048,7 @@ class RemiGameMatch:
                     if not ok:
                         return False, "Harus menyisakan minimal 1 kartu untuk dibuang."
                 else:
-                    cand_has_wild = any(c.is_wildcard(self.wildcard_rank) for c in cand)
+                    sub_wilds = val.wildcards_as_substitute
                     cand_ids = {c.id for c in cand}
                     rem_pool = [c for c in combined_pool if c.id not in cand_ids]
                     can_close_now, _ = self._can_close_with_remaining_pool(
@@ -1057,11 +1057,12 @@ class RemiGameMatch:
                         rem_pool,
                         forbidden_discard_id=forbidden_id,
                     )
-                    if cand_has_wild and not can_close_now:
+                    if sub_wilds > 0 and not can_close_now:
                         if not ok:
                             return (
                                 False,
-                                f"Kartu buangan {target_card.id} hanya bisa diambil dengan Wild Card saat Anda akan menutup kartu (Tutup Biasa)!",
+                                f"Kartu buangan {target_card.id} hanya bisa diambil dengan Wild Card saat Anda akan menutup kartu "
+                                f"(Tutup Biasa), atau jika Wild Card berfungsi sebagai kartu biasa (regular card) dengan serinya!",
                             )
                     else:
                         chosen_meld = val.ordered_cards
@@ -1082,8 +1083,7 @@ class RemiGameMatch:
         player.sort_hand()
 
         val_chosen = validate_meld(chosen_meld, wildcard_rank=self.wildcard_rank)
-        has_wild = any(c.is_wildcard(self.wildcard_rank) for c in chosen_meld)
-        self.must_close_this_turn = has_wild
+        self.must_close_this_turn = (val_chosen.wildcards_as_substitute > 0)
         self.forbidden_discard_card_id = forbidden_id
         self.turn_taken_discard_card = target_card
         self.turn_taken_discarder_seat = self.card_discarder.get(target_card.id)
@@ -1118,10 +1118,9 @@ class RemiGameMatch:
         # 1. Coba sebagai kombinasi baru berdiri sendiri (>= 3 kartu)
         val = validate_meld(selected, wildcard_rank=self.wildcard_rank)
         if val.valid:
-            # Aturan Wild Card: Jika kombinasi mengandung Wild Card / Joker,
+            # Aturan Wild Card: Jika memakai Wild Card sebagai pengganti (wildcards_as_substitute > 0),
             # HANYA boleh diturunkan saat pemain langsung menutup kartu (Tutup) pada giliran ini!
-            has_wild = any(c.is_wildcard(self.wildcard_rank) for c in selected)
-            if has_wild:
+            if val.wildcards_as_substitute > 0:
                 rem_pool = [c for c in player.hand if c.id not in id_set]
                 can_close_now, _ = self._can_close_with_remaining_pool(
                     player.melds,
@@ -1131,7 +1130,7 @@ class RemiGameMatch:
                 if not can_close_now:
                     return (
                         False,
-                        "Kombinasi dengan Wild Card hanya boleh diturunkan saat Anda langsung menutup kartu (Tutup)!",
+                        "Kombinasi dengan Wild Card pengganti hanya boleh diturunkan saat Anda langsung menutup kartu (Tutup)!",
                     )
 
             # Syarat buka meja / turun kartu:
@@ -1764,15 +1763,15 @@ class RemiGameMatch:
             for idx in range(total_disc - 1, min_idx - 1, -1):
                 ok, _, req_meld = self.can_take_discard(active_seat, idx)
                 if ok and req_meld:
-                    has_wild = any(c.is_wildcard(self.wildcard_rank) for c in req_meld)
-                    if has_wild:
+                    val_req = validate_meld(req_meld, wildcard_rank=self.wildcard_rank)
+                    if val_req.wildcards_as_substitute > 0:
                         taken = self.discard_pile[idx:]
                         cand_ids = {c.id for c in req_meld}
                         rem_pool = [c for c in (player.hand + taken) if c.id not in cand_ids]
                         forbidden_id = self.discard_pile[idx].id if len(taken) == 1 else None
                         can_close_now, _ = self._can_close_with_remaining_pool(
                             player.melds,
-                            req_meld,
+                            val_req.ordered_cards,
                             rem_pool,
                             forbidden_discard_id=forbidden_id,
                         )
@@ -1786,7 +1785,6 @@ class RemiGameMatch:
                         must_include=self.discard_pile[idx],
                         wildcard_rank=self.wildcard_rank,
                         already_has_seri=already_seri,
-                        allow_wildcard_substitutes=False,
                     )
                     extra_dead_cost = sum(c.get_deadwood_penalty(self.wildcard_rank) for c in rem) - sum(
                         c.get_deadwood_penalty(self.wildcard_rank) for c in player.hand
