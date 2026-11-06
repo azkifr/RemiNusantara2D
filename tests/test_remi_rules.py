@@ -1297,6 +1297,71 @@ def test_tris_four_tutup_tangan_from_pak_only():
     print("[PASS] Kondisi baru Tris-Four (3-3-3 & 4-4-4-4) Tutup Tangan dari Pak Lulus 100%!")
 
 
+def test_take_discard_to_close_with_in_hand_seri_or_tris_ace():
+    # Setup game matching user screenshot:
+    game = RemiGameMatch(num_players=4)
+    game.start_new_round(seed=12)
+    game.wildcard_rank = "2"
+    p0 = game.players[1]
+    p0.melds = []
+    p0.hand = [
+        Card.from_id("2S"),
+        Card.from_id("JOKER"),
+        Card.from_id("AS"),
+        Card.from_id("AH"),
+        Card.from_id("2D"),
+        Card.from_id("5C"),
+        Card.from_id("JS"),
+    ]
+    game.discard_pile = [Card.from_id("5H")]
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 1
+
+    # 1. Harus BISA mengambil 5H dari buangan karena memiliki Tris As (A,A + Wildcard) di tangan untuk langsung menutup ronde!
+    ok, msg, auto_meld = game.can_take_discard(1, 0)
+    assert ok, f"Harus bisa ambil 5H dari buangan untuk menutup ronde: {msg}"
+    assert auto_meld is not None
+
+    # 2. Eksekusi ambil buangan
+    ok_take, msg_take = game.take_from_discard(1, 0)
+    assert ok_take, f"Gagal take_from_discard: {msg_take}"
+    assert game.must_close_this_turn is True, "Wajib menutup kartu giliran ini!"
+    assert len(p0.melds) == 1
+
+    # 3. Cek apakah bisa menutup ronde dan membuang JS
+    can_close, is_tt, disc_id = game.check_can_close_round(1)
+    assert can_close, "Harus bisa menutup ronde!"
+    assert not is_tt, "Harus Tutup Biasa (bukan Tutup Tangan Murni karena ambil buangan)"
+    assert disc_id == "JS", f"Kartu buangan penutup harus JS, didapat: {disc_id}"
+
+    ok_disc, msg_disc = game.discard_card(1, "JS")
+    assert ok_disc, f"Gagal menutup dengan buang JS: {msg_disc}"
+    assert game.phase == "ROUND_OVER"
+    assert len(p0.hand) == 0, "Tangan harus kosong setelah menutup"
+    assert len(p0.melds) == 2, "Harus menurunkan 2 melds (Tris 5 & Kuartet/Tris As)"
+
+    # 4. Tes Negatif: Jika TIDAK bisa menutup ronde, ambil buangan untuk Tris selain As tetap DITOLAK
+    game.start_new_round(seed=13)
+    game.wildcard_rank = "2"
+    p1 = game.players[0]
+    p1.melds = []
+    p1.hand = [
+        Card.from_id("5C"),
+        Card.from_id("2D"),
+        Card.from_id("JS"),
+        Card.from_id("8H"),
+        Card.from_id("9D"),
+    ]
+    game.discard_pile = [Card.from_id("5H")]
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+
+    ok_neg, msg_neg, _ = game.can_take_discard(0, 0)
+    assert not ok_neg, "Harus DITOLAK mengambil buangan untuk Tris jika tidak bisa menutup ronde dan belum punya Seri di meja!"
+
+    print("[PASS] Ambil buangan untuk Tris dengan Seri / Tris As di tangan saat langsung menutup ronde Lulus 100%!")
+
+
 if __name__ == "__main__":
     test_deck_53_and_4_wildcards_from_first_card()
     test_3_tier_separation_rules()
@@ -1323,4 +1388,5 @@ if __name__ == "__main__":
     test_take_discard_combining_multi_discard_cards_and_seri_allowed()
     test_bot_and_player_cannot_meld_wildcard_substitute_without_closing()
     test_tris_four_tutup_tangan_from_pak_only()
+    test_take_discard_to_close_with_in_hand_seri_or_tris_ace()
     print("\nSEMUA UNIT TEST REMI INDONESIA v3.5 LULUS 100%!")

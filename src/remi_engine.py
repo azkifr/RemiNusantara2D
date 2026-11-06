@@ -751,6 +751,7 @@ class RemiGameMatch:
         new_meld: Optional[List[Card]],
         rem_pool: List[Card],
         forbidden_discard_id: Optional[str] = None,
+        taking_discard: bool = False,
     ) -> Tuple[bool, Optional[str]]:
         """
         Mengecek apakah sisa kartu `rem_pool` (setelah `new_meld` diturunkan bersama `existing_melds`)
@@ -799,7 +800,8 @@ class RemiGameMatch:
                                 break
 
             is_tris_four = (
-                self.turn_taken_discard_card is None
+                not taking_discard
+                and self.turn_taken_discard_card is None
                 and is_valid_tris_four_melds(combined_melds, self.wildcard_rank)
             )
             if (
@@ -901,9 +903,6 @@ class RemiGameMatch:
                             continue
 
                         is_tris_ace = res.meld_type in ("TRIS_ACE", "KUARTET_ACE")
-                        if not already_safe and not res.is_seri and not is_tris_ace:
-                            continue
-
                         sub_wilds = res.wildcards_as_substitute
 
                         # Khusus kartu As ('A') saat tidak menutup dengan wildcard: wajib minimal 2 kartu As asli di tangan
@@ -919,7 +918,18 @@ class RemiGameMatch:
                             res.ordered_cards,
                             rem_pool,
                             forbidden_discard_id=forbidden_id,
+                            taking_discard=True,
                         )
+
+                        # Syarat Buka Meja / Seri / Tris As:
+                        # Jika belum punya Seri atau Tris As di meja (already_safe == False):
+                        # - Jika kombinasi buangan ini (res) BUKAN Seri dan BUKAN Tris As:
+                        #   Pemain HANYA boleh mengambilnya jika dengan kartu tersisa di tangan
+                        #   langsung dapat MENUTUP KARTU pada giliran ini (can_close_now == True)
+                        #   dengan kombinasi meja + tangan memiliki minimal 1 Seri atau Tris As!
+                        if not already_safe and not res.is_seri and not is_tris_ace:
+                            if not can_close_now:
+                                continue
 
                         # Jika memakai Wild Card sebagai pengganti (bukan regular card dengan serinya),
                         # WAJIB hanya boleh dilakukan saat pemain akan menutup kartu pada giliran ini!
@@ -1065,13 +1075,7 @@ class RemiGameMatch:
 
             if val.valid:
                 is_tris_ace = val.meld_type in ("TRIS_ACE", "KUARTET_ACE")
-                if not already_safe and not val.is_seri and not is_tris_ace:
-                    if not ok:
-                        return (
-                            False,
-                            "Belum punya Kartu Urut (Seri min 3) atau Tris As di meja! Ambil buangan untuk Tris/Kembar 3 baru boleh setelah punya Seri / Tris As.",
-                        )
-                elif len(combined_pool) - len(cand) < 1:
+                if len(combined_pool) - len(cand) < 1:
                     if not ok:
                         return False, "Harus menyisakan minimal 1 kartu untuk dibuang."
                 else:
@@ -1083,8 +1087,15 @@ class RemiGameMatch:
                         val.ordered_cards,
                         rem_pool,
                         forbidden_discard_id=forbidden_id,
+                        taking_discard=True,
                     )
-                    if sub_wilds > 0 and not can_close_now:
+                    if not already_safe and not val.is_seri and not is_tris_ace and not can_close_now:
+                        if not ok:
+                            return (
+                                False,
+                                "Belum punya Kartu Urut (Seri min 3) atau Tris As di meja! Ambil buangan untuk Tris/Kembar 3 baru boleh jika langsung menutup kartu dengan Seri/Tris As di tangan.",
+                            )
+                    elif sub_wilds > 0 and not can_close_now:
                         if not ok:
                             return (
                                 False,
@@ -1110,7 +1121,8 @@ class RemiGameMatch:
         player.sort_hand()
 
         val_chosen = validate_meld(chosen_meld, wildcard_rank=self.wildcard_rank)
-        self.must_close_this_turn = (val_chosen.wildcards_as_substitute > 0)
+        is_open_meld = val_chosen.is_seri or val_chosen.meld_type in ("TRIS_ACE", "KUARTET_ACE")
+        self.must_close_this_turn = (val_chosen.wildcards_as_substitute > 0) or (not already_safe and not is_open_meld)
         self.forbidden_discard_card_id = forbidden_id
         self.turn_taken_discard_card = target_card
         self.turn_taken_discarder_seat = self.card_discarder.get(target_card.id)
