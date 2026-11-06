@@ -268,7 +268,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
     position: relative;
     padding: 5px 8px;
-    overflow: hidden;
+    overflow: visible;
   }
   .zone-active {
     border-color: #facc15;
@@ -1153,6 +1153,64 @@ HTML_PAGE = r"""<!DOCTYPE html>
     0% { box-shadow: 0 0 6px #f59e0b; transform: scale(0.98); }
     100% { box-shadow: 0 0 20px #fde047, 0 0 35px #f59e0b; transform: scale(1.04); }
   }
+  .btn-ceki {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #fff;
+    border-color: #fde047;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45);
+    transition: all 0.2s ease;
+  }
+  .btn-ceki:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fbbf24 0%, #ea580c 100%);
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.7);
+    transform: translateY(-2px);
+  }
+  .btn-ceki:disabled, .btn-ceki.btn-cooldown {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+    transform: none !important;
+  }
+  .ceki-bubble {
+    position: absolute;
+    top: -42px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    letter-spacing: 2px;
+    padding: 6px 20px;
+    border-radius: 25px;
+    box-shadow: 0 4px 18px rgba(239, 68, 68, 0.75), 0 0 14px rgba(245, 158, 11, 0.9);
+    border: 2px solid #ffffff;
+    z-index: 10000;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: cekiPopAnim 2.2s ease-out forwards;
+  }
+  .ceki-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 9px 9px 0;
+    border-style: solid;
+    border-color: #ef4444 transparent;
+    display: block;
+    width: 0;
+  }
+  @keyframes cekiPopAnim {
+    0% { transform: translateX(-50%) scale(0.3); opacity: 0; }
+    15% { transform: translateX(-50%) scale(1.25); opacity: 1; }
+    25% { transform: translateX(-50%) scale(1.0); }
+    75% { transform: translateX(-50%) scale(1.0); opacity: 1; }
+    100% { transform: translateX(-50%) scale(0.7) translateY(-14px); opacity: 0; }
+  }
   .btn-sort {
     background: rgba(255, 255, 255, 0.08);
     color: #cbd5e1;
@@ -1991,6 +2049,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <button id="btn-tutup-tangan" class="btn-action btn-tutup" onclick="declareTutupTangan()" title="Tutup Tangan langsung dari tangan (+250 Poin) (T)">
       🏆 TUTUP TANGAN +250 (T)
     </button>
+    <button id="btn-ceki" class="btn-action btn-ceki" onclick="triggerCeki()" title="Serukan CEKI! (C) - Cooldown 2 Detik">
+      📢 CEKI (C)
+    </button>
     <button class="btn-action btn-sort" onclick="sendAction('SORT_RANK')" title="Urutkan kartu tangan berdasarkan Angka (S)">
       🔢 URUT ANGKA (S)
     </button>
@@ -2382,6 +2443,14 @@ function updateUI(st) {
   const wRank = st.wildcard_rank || '-';
   const isPaused = Boolean(st.is_paused);
   const pauseSuffix = isPaused ? ' | ⏸️ DIJEDA' : '';
+
+  // Cek siaran seruan CEKI dari server
+  if (st.latest_ceki && st.latest_ceki.timestamp && st.latest_ceki.timestamp !== lastHandledCekiTime) {
+    lastHandledCekiTime = st.latest_ceki.timestamp;
+    if (st.latest_ceki.seat !== mySeat) {
+      showCekiBubble(st.latest_ceki.seat);
+    }
+  }
 
   document.getElementById('hdr-title').textContent =
     `REMI NUSANTARA 2D | Room: #${st.room_code} | Ronde: ${st.round_number} | WILD: JOKER + '${wRank}' | Target: ${st.target_score}${pauseSuffix}`;
@@ -2857,6 +2926,95 @@ async function sendAction(action, data = {}) {
 
 function togglePause() {
   sendAction('TOGGLE_PAUSE');
+}
+
+// Fitur Tombol & Bubble CEKI (Cooldown 2 Detik)
+let lastCekiTime = 0;
+let lastHandledCekiTime = 0;
+
+function triggerCeki() {
+  const now = Date.now();
+  if (now - lastCekiTime < 2000) return;
+  lastCekiTime = now;
+
+  const btn = document.getElementById('btn-ceki');
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('btn-cooldown');
+    const start = Date.now();
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, (2000 - (Date.now() - start)) / 1000);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        btn.disabled = false;
+        btn.classList.remove('btn-cooldown');
+        btn.innerHTML = '📢 CEKI (C)';
+      } else {
+        btn.innerHTML = `⏳ CEKI (${remaining.toFixed(1)}s)`;
+      }
+    }, 100);
+  }
+
+  sendAction('CEKI');
+  showCekiBubble(mySeat !== null ? mySeat : 0);
+}
+
+function getZoneElementForSeat(seat) {
+  const active = (mySeat !== null) ? mySeat : 0;
+  if (seat === active) {
+    return document.getElementById('zone-bottom');
+  }
+  const n = (latestState && latestState.players) ? latestState.players.length : 4;
+  if (n === 2) {
+    if (seat === (active + 1) % n) return document.getElementById('zone-top');
+  } else if (n === 3) {
+    if (seat === (active + 1) % n) return document.getElementById('zone-left');
+    if (seat === (active + 2) % n) return document.getElementById('zone-top');
+  } else {
+    if (seat === (active + 1) % n) return document.getElementById('zone-left');
+    if (seat === (active + 2) % n) return document.getElementById('zone-top');
+    if (seat === (active + 3) % n) return document.getElementById('zone-right');
+  }
+  return document.getElementById('zone-bottom');
+}
+
+function showCekiBubble(seat) {
+  const zoneEl = getZoneElementForSeat(seat);
+  if (!zoneEl) return;
+
+  const existing = zoneEl.querySelector('.ceki-bubble');
+  if (existing) existing.remove();
+
+  const bubble = document.createElement('div');
+  bubble.className = 'ceki-bubble';
+  bubble.textContent = '📢 CEKI!';
+  zoneEl.appendChild(bubble);
+
+  playCekiAudio();
+
+  setTimeout(() => {
+    bubble.remove();
+  }, 2200);
+}
+
+function playCekiAudio() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(540, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(1175, ctx.currentTime + 0.22);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.32);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.32);
+  } catch (e) {}
 }
 
 // Drag & Drop (dilengkapi proteksi anti-stuck, reorder manual, & mobile touch gestures)
@@ -3708,6 +3866,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'b' || e.key === 'B') discardSelected();
   else if (e.key === 's' || e.key === 'S') sendAction('SORT_RANK');
   else if (e.key === 'f' || e.key === 'F') sendAction('SORT_SUIT');
+  else if (e.key === 'c' || e.key === 'C') triggerCeki();
   else if (e.key === '[' || e.key === '{') slideSelectedCard(-1);
   else if (e.key === ']' || e.key === '}') slideSelectedCard(1);
   else if (e.key === 'ArrowLeft' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(-1); }
@@ -3742,6 +3901,11 @@ def _format_state_dict(seat: Optional[int]) -> dict:
     st["wildcard_multiplier"] = GAME._wildcard_value()
     st["last_event"] = st.get("status_message", "")
     st["leader_seat"] = st.get("highest_score_seat", 0)
+    latest_ceki = getattr(GAME, "latest_ceki", None)
+    if latest_ceki and (time.time() - latest_ceki.get("timestamp", 0) < 3.0):
+        st["latest_ceki"] = latest_ceki
+    else:
+        st["latest_ceki"] = None
     return st
 
 
@@ -3992,6 +4156,16 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     payload.get("source_card_id", ""),
                     payload.get("target_card_id", ""),
                 )
+            elif action == "CEKI":
+                now = time.time()
+                last_t = getattr(GAME, "last_ceki_times", {}).get(seat, 0.0)
+                if now - last_t >= 1.9:
+                    if not hasattr(GAME, "last_ceki_times"):
+                        GAME.last_ceki_times = {}
+                    GAME.last_ceki_times[seat] = now
+                    p_name = GAME.players[seat].name if seat < len(GAME.players) else f"Pemain {seat+1}"
+                    GAME.status_message = f"📢 {p_name} berseru: CEKI!"
+                    GAME.latest_ceki = {"seat": seat, "timestamp": now, "name": p_name}
 
             st = _format_state_dict(seat)
 

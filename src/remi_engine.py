@@ -346,6 +346,24 @@ def has_valid_seri_or_ace_meld(melds: List[List[Card]], wildcard_rank: Optional[
     return False
 
 
+def is_valid_tris_four_melds(melds: List[List[Card]], wildcard_rank: Optional[str] = None) -> bool:
+    """
+    Mengecek apakah susunan kombinasi membentuk 'Tris-Four' (1 Tris 3 kartu + 1 Kuartet 4 kartu = 7 kartu).
+    Keduanya adalah kombinasi sah kartu kembar / sama rank (bukan seri urut).
+    Kondisi khusus ini mengizinkan Tutup Tangan langsung jika diambil dari Pak (bukan dari kartu buangan).
+    """
+    if len(melds) != 2:
+        return False
+    lens = sorted([len(m) for m in melds])
+    if lens != [3, 4]:
+        return False
+    for m in melds:
+        res = validate_meld(m, wildcard_rank=wildcard_rank)
+        if not res.valid or res.is_seri:
+            return False
+    return True
+
+
 def find_best_melds_in_hand(
     hand: List[Card],
     must_include: Optional[Card] = None,
@@ -391,8 +409,9 @@ def find_best_melds_in_hand(
             rem = [c for c in hand if c.id not in used_ids]
             dead_pts = sum(c.get_deadwood_penalty(wildcard_rank) for c in rem)
             
-            # Mendukung Seri Urut ATAU Tris As sebagai pembuka sah
-            has_opener = has_seri_now or already_has_seri or any(
+            # Mendukung Seri Urut, Tris As, ATAU Tris-Four (3-3-3 & 4-4-4-4) sebagai pembuka sah
+            is_tf = is_valid_tris_four_melds(current_melds, wildcard_rank=wildcard_rank)
+            has_opener = has_seri_now or already_has_seri or is_tf or any(
                 validate_meld(m, wildcard_rank=wildcard_rank).is_seri or
                 validate_meld(m, wildcard_rank=wildcard_rank).meld_type in ("TRIS_ACE", "KUARTET_ACE")
                 for m in current_melds
@@ -779,10 +798,18 @@ class RemiGameMatch:
                                 changed = True
                                 break
 
+            is_tris_four = (
+                self.turn_taken_discard_card is None
+                and is_valid_tris_four_melds(combined_melds, self.wildcard_rank)
+            )
             if (
                 len(rem_list) == 0
                 and len(combined_melds) > 0
-                and (already_safe or has_valid_seri_or_ace_meld(combined_melds, self.wildcard_rank))
+                and (
+                    already_safe
+                    or has_valid_seri_or_ace_meld(combined_melds, self.wildcard_rank)
+                    or is_tris_four
+                )
             ):
                 is_wild = cand_disc.is_wildcard(self.wildcard_rank)
                 valid_closing_discards.append((is_wild, cand_disc.base_points, cand_disc.id))
@@ -1139,11 +1166,17 @@ class RemiGameMatch:
                 is_seri = val.is_seri
                 is_tris_ace = val.meld_type in ("TRIS_ACE", "KUARTET_ACE")
                 if not is_seri and not is_tris_ace:
-                    return (
-                        False,
-                        f"Belum bisa menurunkan {val.meld_type}! Untuk membuka meja, Anda harus memiliki/menurunkan Kartu Urut (Seri min 3) "
-                        f"atau Tris As (A-A-A) terlebih dahulu sebelum bisa menurunkan Tris lainnya.",
+                    can_close_tf, _ = self._can_close_with_remaining_pool(
+                        player.melds,
+                        val.ordered_cards,
+                        [c for c in player.hand if c.id not in id_set],
                     )
+                    if not (can_close_tf and self.turn_taken_discard_card is None):
+                        return (
+                            False,
+                            f"Belum bisa menurunkan {val.meld_type}! Untuk membuka meja, Anda harus memiliki/menurunkan Kartu Urut (Seri min 3) "
+                            f"atau Tris As (A-A-A) terlebih dahulu sebelum bisa menurunkan Tris lainnya.",
+                        )
 
             player.hand = [c for c in player.hand if c.id not in id_set]
             player.melds.append(val.ordered_cards)
@@ -1191,7 +1224,8 @@ class RemiGameMatch:
         )
 
         if not already_safe and melds:
-            has_opener = any(
+            is_tf = (self.turn_taken_discard_card is None and is_valid_tris_four_melds(melds, self.wildcard_rank))
+            has_opener = is_tf or any(
                 validate_meld(m, wildcard_rank=self.wildcard_rank).is_seri
                 or validate_meld(m, wildcard_rank=self.wildcard_rank).meld_type in ("TRIS_ACE", "KUARTET_ACE")
                 for m in melds
@@ -1320,10 +1354,18 @@ class RemiGameMatch:
                                 changed = True
                                 break
 
+            is_tris_four = (
+                self.turn_taken_discard_card is None
+                and is_valid_tris_four_melds(combined_melds, self.wildcard_rank)
+            )
             if (
                 len(rem) == 0
                 and len(combined_melds) > 0
-                and (already_safe or has_valid_seri_or_ace_meld(combined_melds, self.wildcard_rank))
+                and (
+                    already_safe
+                    or has_valid_seri_or_ace_meld(combined_melds, self.wildcard_rank)
+                    or is_tris_four
+                )
             ):
                 is_wild = cand.is_wildcard(self.wildcard_rank)
                 valid_closing_discards.append((is_wild, cand.base_points, cand.id))
@@ -1450,14 +1492,25 @@ class RemiGameMatch:
                                 changed = True
                                 break
 
+            is_tris_four = (
+                self.turn_taken_discard_card is None
+                and is_valid_tris_four_melds(combined_melds, self.wildcard_rank)
+            )
             # HANYA otomatis menutup/menurunkan jika seluruh sisa kartu jadi (len(rem) == 0) untuk TUTUP!
             can_close = (
                 len(rem) == 0
                 and len(combined_melds) > 0
-                and (already_safe or has_valid_seri_or_ace_meld(combined_melds, self.wildcard_rank))
+                and (
+                    already_safe
+                    or has_valid_seri_or_ace_meld(combined_melds, self.wildcard_rank)
+                    or is_tris_four
+                )
             )
         else:
-            can_close = len(player.melds) > 0 and already_safe
+            can_close = len(player.melds) > 0 and (
+                already_safe
+                or (self.turn_taken_discard_card is None and is_valid_tris_four_melds(player.melds, self.wildcard_rank))
+            )
 
         # Jika pemain mengambil buangan menggunakan Wild Card pengganti pada giliran ini,
         # pemain WAJIB menutup kartu pada giliran ini!
@@ -1477,9 +1530,13 @@ class RemiGameMatch:
         self.card_discarder[target.id] = seat
         self.must_close_this_turn = False
 
-        # Cek kondisi Tutup (0 kartu tersisa di tangan, punya minimal 1 meld, dan punya minimal 1 Seri min 3 atau Tris As)
+        # Cek kondisi Tutup (0 kartu tersisa di tangan, punya minimal 1 meld, dan punya minimal 1 Seri min 3 atau Tris As atau Tris-Four)
         if len(player.hand) == 0 and len(player.melds) > 0:
-            if has_valid_seri_or_ace_meld(player.melds, self.wildcard_rank):
+            is_safe_to_close = (
+                has_valid_seri_or_ace_meld(player.melds, self.wildcard_rank)
+                or (self.turn_taken_discard_card is None and is_valid_tris_four_melds(player.melds, self.wildcard_rank))
+            )
+            if is_safe_to_close:
                 # Tutup Tangan Murni (+250) HANYA jika:
                 # 1. Di awal giliran ini belum ada Kartu Jadi di meja (melds_count_at_turn_start == 0)
                 # 2. Pemain TIDAK mengambil kartu dari tempat pembuangan pada giliran ini (turn_taken_discard_card is None)!
@@ -1493,7 +1550,9 @@ class RemiGameMatch:
                     and total_melded_cards >= INITIAL_HAND_SIZE
                 )
                 if is_tutup_tangan:
-                    reason = f"TUTUP TANGAN MURNI oleh {player.name} (+{TUTUP_TANGAN_BONUS} Poin)! Nilai pemain lain tidak dihitung (0 Poin)."
+                    is_tf = is_valid_tris_four_melds(player.melds, self.wildcard_rank)
+                    tf_label = "TRIS-FOUR " if is_tf else ""
+                    reason = f"TUTUP TANGAN {tf_label}MURNI oleh {player.name} (+{TUTUP_TANGAN_BONUS} Poin)! Nilai pemain lain tidak dihitung (0 Poin)."
                 else:
                     bonus = self.compute_tutup_biasa_bonus(target)
                     meld_sum = sum(validate_meld(m, wildcard_rank=self.wildcard_rank).points for m in player.melds)
@@ -1645,8 +1704,12 @@ class RemiGameMatch:
             else:
                 # KONDISI TUTUP BIASA ATAU PAK HABIS:
                 # ATURAN: Pemain yang memiliki Kartu Urut (Seri min 3) ATAU Tris As (A-A-A)
-                # berstatus AMAN dari penalti terbakar!
-                if has_valid_seri_or_ace_meld(candidate_all_melds, self.wildcard_rank):
+                # atau penutup Tris-Four berstatus AMAN dari penalti terbakar!
+                is_safe_meld = (
+                    has_valid_seri_or_ace_meld(candidate_all_melds, self.wildcard_rank)
+                    or (closer_seat is not None and p.seat == closer_seat and is_valid_tris_four_melds(p.melds, self.wildcard_rank))
+                )
+                if is_safe_meld:
                     p.burned_last_round = False
                     for m in hand_melds:
                         p.melds.append(m)
@@ -1910,7 +1973,7 @@ class RemiGameMatch:
                     "connected": p.connected,
                     "auto_pilot": p.auto_pilot,
                     "burned_last_round": p.burned_last_round,
-                    "has_seri": has_valid_seri_or_ace_meld(p.melds, w_rank),
+                    "has_seri": has_valid_seri_or_ace_meld(p.melds, w_rank) or is_valid_tris_four_melds(p.melds, w_rank),
                     "can_tutup_tangan": (
                         self.check_can_declare_tutup_tangan(p.seat)[0]
                         if (viewer_seat is None or viewer_seat == p.seat)

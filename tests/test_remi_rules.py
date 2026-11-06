@@ -1238,6 +1238,65 @@ def test_bot_and_player_cannot_meld_wildcard_substitute_without_closing():
     print("[PASS] Bot dan pemain dilarang menurunkan kombinasi Wild Card pengganti tanpa menutup kartu Lulus 100%!")
 
 
+def test_tris_four_tutup_tangan_from_pak_only():
+    # Setup game
+    game = RemiGameMatch(["Pemain 1", "Bot Siti"])
+    game.start_new_round()
+    game.wildcard_rank = "5"
+    p0 = game.players[0]
+    p1 = game.players[1]
+
+    # Kasus 1: Pemain pegang 3,3,3 dan 4,4,4,4 + 9H (ditarik dari PAK, tanpa Seri)
+    # Harus BISA langsung Tutup Tangan (+250 Poin)!
+    p0.melds = []
+    p0.hand = [
+        Card("3S", "3", "S"),
+        Card("3H", "3", "H"),
+        Card("3D", "3", "D"),
+        Card("4S", "4", "S"),
+        Card("4H", "4", "H"),
+        Card("4D", "4", "D"),
+        Card("4C", "4", "C"),
+        Card("9H", "9", "H"),
+    ]
+    game.phase = "TURN_MELD_DISCARD"
+    game.current_turn_seat = 0
+    game.turn_taken_discard_card = None
+
+    can_tt, cid = game.check_can_declare_tutup_tangan(0)
+    assert can_tt, "Harus bisa Tutup Tangan dengan Tris-Four (3-3-3 & 4-4-4-4) dari Pak!"
+    assert cid == "9H", f"Kartu buang harus 9H, didapat: {cid}"
+
+    ok_close, msg_close = game.declare_tutup_tangan(0)
+    assert ok_close, f"Gagal declare_tutup_tangan Tris-Four: {msg_close}"
+    assert game.phase == "ROUND_OVER"
+    assert p0.total_score == 250, f"Skor harus +250 Poin, didapat: {p0.total_score}"
+    assert p1.total_score == 0, "Skor pemain lain harus 0 (dibekukan karena Tutup Tangan)!"
+    assert "TRIS-FOUR" in msg_close
+
+    # Kasus 2: Ambil dari kartu buangan dengan Tris-Four TIDAK BOLEH jika belum punya Seri!
+    game.start_new_round()
+    game.wildcard_rank = "5"
+    p0.melds = []
+    p0.hand = [
+        Card("3S", "3", "S"),
+        Card("3H", "3", "H"),
+        Card("3D", "3", "D"),
+        Card("4S", "4", "S"),
+        Card("4H", "4", "H"),
+        Card("4D", "4", "D"),
+        Card("9H", "9", "H"),
+    ]
+    game.discard_pile = [Card("4C", "4", "C")]
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+
+    ok_disc, msg_disc, _ = game.can_take_discard(0, 0)
+    assert not ok_disc, "DILARANG mengambil kartu buangan untuk Tris-Four jika belum punya Seri di meja!"
+
+    print("[PASS] Kondisi baru Tris-Four (3-3-3 & 4-4-4-4) Tutup Tangan dari Pak Lulus 100%!")
+
+
 if __name__ == "__main__":
     test_deck_53_and_4_wildcards_from_first_card()
     test_3_tier_separation_rules()
@@ -1263,4 +1322,5 @@ if __name__ == "__main__":
     test_take_discard_min_2_cards_in_hand_and_wildcard_rules()
     test_take_discard_combining_multi_discard_cards_and_seri_allowed()
     test_bot_and_player_cannot_meld_wildcard_substitute_without_closing()
+    test_tris_four_tutup_tangan_from_pak_only()
     print("\nSEMUA UNIT TEST REMI INDONESIA v3.5 LULUS 100%!")
