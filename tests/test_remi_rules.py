@@ -113,9 +113,9 @@ def test_mandatory_seri_min_3_or_burn_all():
     assert ok_d, msg_d
     assert game.phase == "ROUND_OVER"
 
-    # Cek P0: Aman karena punya Seri 7S-8S-9S -> +15 + 45 = +60, ditambah Tutup Biasa: buang 4C (5) x Wild '2' (5) = +25
+    # Cek P0: Aman karena punya Seri 7S-8S-9S -> +15 + 45 = +60, ditambah Tutup Biasa: buang 4C (Number card) = +50 -> total +110
     assert not p0.burned_last_round
-    assert p0.last_round_score == 85, f"Expected P0 score +85, got {p0.last_round_score}"
+    assert p0.last_round_score == 110, f"Expected P0 score +110, got {p0.last_round_score}"
 
     # Cek P1: TERBAKAR SEMUA karena tidak punya Seri min 3 atau Tris As! (-15 - 30 - 5 = -50)
     assert p1.burned_last_round, "P1 harus berstatus TERBAKAR karena tidak punya Kartu Urut (Seri min 3) atau Tris As!"
@@ -246,11 +246,11 @@ def test_tutup_biasa_discard_times_wildcard():
     ok, msg = game.discard_card(0, "KC")
     assert ok, msg
     assert game.phase == "ROUND_OVER"
-    # Kartu jadi +15, Tutup Biasa: K (10) x Wild angka (5) = +50 -> total +65
-    assert p0.last_round_breakdown["tutup_bonus"] == 50, p0.last_round_breakdown
-    assert p0.last_round_score == 65, f"Expected +65, got {p0.last_round_score}"
+    # Kartu jadi +15, Tutup Biasa: Face card KC = +100 -> total +115
+    assert p0.last_round_breakdown["tutup_bonus"] == 100, p0.last_round_breakdown
+    assert p0.last_round_score == 115, f"Expected +115, got {p0.last_round_score}"
 
-    # Wild Card kelompok Face (Q=10): buang A (15) x 10 = +150
+    # Tutup Biasa: buang As AC = +150 -> total +165
     game.start_new_round(seed=601)
     game.wildcard_rank = "Q"
     p0 = game.players[0]
@@ -262,7 +262,8 @@ def test_tutup_biasa_discard_times_wildcard():
     ok, msg = game.discard_card(0, "AC")
     assert ok, msg
     assert p0.last_round_breakdown["tutup_bonus"] == 150, p0.last_round_breakdown
-    print("[PASS] Tutup Biasa: nilai kartu buangan penutup x nilai Wild Card (K=10 x 5 = +50)")
+    assert p0.last_round_score == 165, f"Expected +165, got {p0.last_round_score}"
+    print("[PASS] Tutup Biasa: Nilai flat Number=50, Face=100, As=150")
 
 
 def test_tris_ace_can_meld_without_seri_and_saves_from_burn():
@@ -713,13 +714,13 @@ def test_closing_after_taking_discard_is_not_250_but_tutup_biasa():
     # Kartu Jadi 1: 4H-5H-6H (Seri Number = 5+5+5 = 15 poin)
     # Kartu Jadi 2: JH-QH-KH (Seri Face = 10+10+10 = 30 poin)
     # Total Kartu Jadi = 45 poin.
-    # Bonus Buangan: 9S (angka = 5 poin) x Wild '8' (angka = 5 poin) = +25 poin.
-    # Total Skor Ronde = 45 + 25 = 70 poin (BUKAN 250!).
+    # Bonus Buangan: 9S (Number card) = +50 poin.
+    # Total Skor Ronde = 45 + 50 = 95 poin (BUKAN 250!).
     p0_bd = p0.last_round_breakdown
-    assert p0_bd["tutup_bonus"] == 25, f"Tutup bonus harus 25, didapat {p0_bd['tutup_bonus']}"
+    assert p0_bd["tutup_bonus"] == 50, f"Tutup bonus harus 50, didapat {p0_bd['tutup_bonus']}"
     assert p0_bd["meld_points"] == 45, f"Meld points harus 45, didapat {p0_bd['meld_points']}"
-    assert p0_bd["round_net"] == 70, f"Skor harus 70 (bukan 250!), didapat {p0_bd['round_net']}"
-    assert p0.last_round_score == 70
+    assert p0_bd["round_net"] == 95, f"Skor harus 95 (bukan 250!), didapat {p0_bd['round_net']}"
+    assert p0.last_round_score == 95
 
     # Pemain 3 (Feeder) kena penalti kartu 5S x 10 = 50 poin
     p3 = game.players[3]
@@ -1108,8 +1109,8 @@ def test_take_discard_min_2_cards_in_hand_and_wildcard_rules():
     assert not game.round_closed_by_tutup_tangan, "TIDAK BOLEH dihitung Tutup Tangan Murni (+250)!"
     assert p0.last_round_score != TUTUP_TANGAN_BONUS, f"Skor tidak boleh 250, didapat {p0.last_round_score}"
     # Meld 1: 2S-4S-3H (15 poin), Meld 2: JH-QH-KH (30 poin) -> Total Meld = 45 poin
-    # Bonus Tutup Biasa: 9D (5) x Wild '3' (5) = +25 poin -> Total = 70 poin
-    assert p0.last_round_score == 70, f"Skor Tutup Biasa harus 70, didapat {p0.last_round_score}"
+    # Bonus Tutup Biasa: 9D (Number card) = +50 poin -> Total = 95 poin
+    assert p0.last_round_score == 95, f"Skor Tutup Biasa harus 95, didapat {p0.last_round_score}"
     print("[PASS] Aturan ambil buangan min 2 kartu di tangan & aturan Wild Card (regular seri vs tutup kartu) Lulus 100%!")
 
 
@@ -1362,6 +1363,133 @@ def test_take_discard_to_close_with_in_hand_seri_or_tris_ace():
     print("[PASS] Ambil buangan untuk Tris dengan Seri / Tris As di tangan saat langsung menutup ronde Lulus 100%!")
 
 
+def test_balap_skor_resets_overtaken_players_to_zero():
+    game = RemiGameMatch(num_players=4)
+    game.start_new_round(seed=123)
+    p0 = game.players[0]
+    p1 = game.players[1]
+    p2 = game.players[2]
+    p3 = game.players[3]
+
+    # Setup initial scores: P1 memimpin dengan 200 poin, P0 hanya 50 poin
+    p0.total_score = 50
+    p1.total_score = 200
+    p2.total_score = 100
+    p3.total_score = 0
+
+    # P0 menutup tangan (+250 Poin)
+    p0.melds = []
+    p0.hand = [
+        Card.from_id("4S"), Card.from_id("5S"), Card.from_id("6S"),
+        Card.from_id("JH"), Card.from_id("QH"), Card.from_id("KH"),
+        Card.from_id("2D"), Card.from_id("9C"), # buang 9C
+    ]
+    game.wildcard_rank = "2"
+    game.phase = "TURN_MELD_DISCARD"
+    game.current_turn_seat = 0
+    game.melds_count_at_turn_start = 0
+
+    ok, msg = game.declare_tutup_tangan(0, "9C")
+    assert ok, msg
+    assert game.phase == "ROUND_OVER"
+
+    # P0 mendapat +250 poin -> skor jadi 50 + 250 = 300 poin!
+    assert p0.total_score == 300
+    # P0 berhasil membalap P1 (200 poin) dan P2 (100 poin)!
+    # Sesuai aturan: pemain yang dibalap skornya menjadi 0 poin!
+    assert p1.total_score == 0, f"Skor P1 harus di-reset ke 0 karena terbalap, didapat {p1.total_score}"
+    assert p1.last_round_breakdown["terbalap"] is True
+    assert p1.last_round_breakdown["terbalap_by"] == p0.name
+
+    assert p2.total_score == 0, f"Skor P2 harus di-reset ke 0 karena terbalap, didapat {p2.total_score}"
+    assert p2.last_round_breakdown["terbalap"] is True
+
+    print("[PASS] Aturan Balap Skor: Pemain yang dibalap skornya berhasil di-reset menjadi 0 Poin Lulus 100%!")
+
+
+def test_feeder_penalty_restricted_to_immediate_predecessor_only():
+    game = RemiGameMatch(num_players=4)
+    game.start_new_round(seed=456)
+    game.wildcard_rank = "9"
+
+    # Skenario 1: Kartu lama yang terkubur dari pemain non-predecessor (misal seat 1 diambil oleh seat 0)
+    # Seat 0 predecessornya adalah Seat 3! Seat 1 BUKAN predecessor Seat 0.
+    p0 = game.players[0]
+    p1 = game.players[1]
+    p3 = game.players[3]
+
+    p0.hand = [
+        Card.from_id("4H"), Card.from_id("5H"),
+        Card.from_id("JH"), Card.from_id("QH"), Card.from_id("KH"),
+        Card.from_id("7D"),
+    ]
+    # Discard pile ada 6H yang dibuang oleh Seat 1 sebelumnya
+    card_6h = Card.from_id("6H")
+    game.discard_pile = [card_6h]
+    game.card_discarder["6H"] = 1 # dibuang oleh seat 1
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+
+    ok_take, _ = game.take_from_discard(0, 0)
+    assert ok_take
+    ok_close, _ = game.discard_card(0, "7D")
+    assert ok_close
+    assert game.phase == "ROUND_OVER"
+
+    # Karena pembuang adalah Seat 1 (bukan predecessor Seat 0 yaitu Seat 3),
+    # Seat 1 TIDAK boleh terkena penalti umpan tutup!
+    assert p1.last_round_breakdown.get("feed_penalty", 0) == 0, (
+        f"Pemain 1 bukan predecessor sehingga TIDAK boleh kena penalti, dapat: {p1.last_round_breakdown.get('feed_penalty')}"
+    )
+
+    # Skenario 2: Kartu dibuang oleh Seat 3 (predecessor langsung dari Seat 0)
+    game.start_new_round(seed=789)
+    game.wildcard_rank = "9"
+    p0 = game.players[0]
+    p3 = game.players[3]
+    p0.hand = [
+        Card.from_id("4H"), Card.from_id("5H"),
+        Card.from_id("JH"), Card.from_id("QH"), Card.from_id("KH"),
+        Card.from_id("7D"),
+    ]
+    game.discard_pile = [card_6h]
+    game.card_discarder["6H"] = 3 # predecessor langsung!
+    game.phase = "TURN_DRAW"
+    game.current_turn_seat = 0
+    ok_take2, _ = game.take_from_discard(0, 0)
+    assert ok_take2
+    ok_close2, _ = game.discard_card(0, "7D")
+    assert ok_close2
+    # Seat 3 harus terkena penalti (6H number card = -50)!
+    assert p3.last_round_breakdown.get("feed_penalty") == 50
+
+    print("[PASS] Penalti Umpan Tutup HANYA berlaku untuk pemain tepat sebelum pemain yang turun tangan Lulus 100%!")
+
+
+def test_check_is_ceki_logic():
+    game = RemiGameMatch(num_players=4)
+    game.start_new_round(seed=321)
+    game.wildcard_rank = "2"
+    p0 = game.players[0]
+
+    # Kondisi 1: Tangan belum ceki (banyak kartu sisa)
+    p0.hand = [Card.from_id("3H"), Card.from_id("8D"), Card.from_id("JS"), Card.from_id("KD")]
+    p0.melds = []
+    assert not game.check_is_ceki(0)
+
+    # Kondisi 2: Sudah ada Seri di meja, dan di tangan ada 1 Seri + 1 kartu buang (total sisa 1 buangan)
+    p0.melds = [[Card.from_id("7S"), Card.from_id("8S"), Card.from_id("9S")]]
+    p0.hand = [Card.from_id("4H"), Card.from_id("5H"), Card.from_id("6H"), Card.from_id("AC")]
+    assert game.check_is_ceki(0), "Harus bernilai True (CEKI) karena sisa 1 kartu buang AC dan sudah ada seri aman!"
+
+    # Kondisi 3: Pada gilirannya saat siap menutup tangan
+    game.phase = "TURN_MELD_DISCARD"
+    game.current_turn_seat = 0
+    assert game.check_is_ceki(0)
+
+    print("[PASS] Validasi Kondisi CEKI (check_is_ceki) Lulus 100%!")
+
+
 if __name__ == "__main__":
     test_deck_53_and_4_wildcards_from_first_card()
     test_3_tier_separation_rules()
@@ -1389,4 +1517,7 @@ if __name__ == "__main__":
     test_bot_and_player_cannot_meld_wildcard_substitute_without_closing()
     test_tris_four_tutup_tangan_from_pak_only()
     test_take_discard_to_close_with_in_hand_seri_or_tris_ace()
+    test_balap_skor_resets_overtaken_players_to_zero()
+    test_feeder_penalty_restricted_to_immediate_predecessor_only()
+    test_check_is_ceki_logic()
     print("\nSEMUA UNIT TEST REMI INDONESIA v3.5 LULUS 100%!")

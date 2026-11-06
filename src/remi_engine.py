@@ -553,6 +553,9 @@ class RemiGameMatch:
         self.turn_taken_discard_card: Optional[Card] = None
         self.turn_taken_discarder_seat: Optional[int] = None
         self.must_close_this_turn: bool = False
+        self.state_version: int = 1
+        self.turn_state_history: List[dict] = []
+        self.ceki_counts: Dict[int, int] = {}
 
     def configure_match(
         self,
@@ -718,6 +721,9 @@ class RemiGameMatch:
             f"Ronde {self.round_number} dimulai! Kartu Bukaan: {opened.id} "
             f"(3 kartu '{opened.rank}' lainnya + 1 JOKER = 4 WILD CARD!).{closer_suffix} Giliran {cur_p.name}."
         )
+        self.state_version = getattr(self, "state_version", 0) + 1
+        self.turn_state_history = [self.to_state_dict(viewer_seat=None, is_snapshot=True)]
+        self.ceki_counts = {}
 
     # ------------------------------------------------------------------
     # Tahap 1: Ambil Kartu dari Pak (Draw Pile)
@@ -1410,6 +1416,48 @@ class RemiGameMatch:
             return True, discard_id
         return False, None
 
+    def check_is_ceki(self, seat: int) -> bool:
+        """
+        Mengecek apakah pemain berada dalam kondisi CEKI:
+        - Kartu buangan sisa 1 (seluruh kartu lain membentuk kombinasi sah dengan minimal 1 Seri / Tris As).
+        - Atau pemain siap/akan menutup tangan pada gilirannya.
+        """
+        if self.phase in ("LOBBY", "ROUND_OVER", "MATCH_OVER"):
+            return False
+        if seat < 0 or seat >= len(self.players):
+            return False
+        p = self.players[seat]
+        already_safe = has_valid_seri_or_ace_meld(p.melds, self.wildcard_rank)
+
+        # 1. Pada gilirannya di tahap susun/buang:
+        if self.phase == "TURN_MELD_DISCARD" and self.current_turn_seat == seat:
+            can_close, _, _ = self.check_can_close_round(seat)
+            return can_close
+
+        # 2. Pada tahap lain atau menunggu giliran (di tangan biasanya 7 kartu):
+        if not p.hand:
+            return False
+
+        for cand_discard in p.hand:
+            others = [c for c in p.hand if c.id != cand_discard.id]
+            if not others:
+                if p.melds and already_safe:
+                    return True
+                continue
+            melds, rem = find_best_melds_in_hand(
+                others,
+                wildcard_rank=self.wildcard_rank,
+                already_has_seri=already_safe,
+            )
+            comb = [list(m) for m in p.melds] + [list(m) for m in melds]
+            if (
+                len(rem) == 0
+                and len(comb) > 0
+                and (already_safe or has_valid_seri_or_ace_meld(comb, self.wildcard_rank))
+            ):
+                return True
+        return False
+
     def declare_tutup_tangan(self, seat: int, discard_card_id: Optional[str] = None) -> Tuple[bool, str]:
         """Menutup langsung dari tangan tanpa Kartu Jadi sebelumnya (+250 Poin, wajib ada >=1 Seri min 3 atau Tris As) atau Tutup Biasa jika ambil buangan."""
         if self.phase != "TURN_MELD_DISCARD" or seat != self.current_turn_seat:
@@ -1571,18 +1619,19 @@ class RemiGameMatch:
                     close_source = "ambil buangan" if took_discard_this_turn else "tutup biasa"
                     reason = (
                         f"Tutup Kartu ({close_source}) oleh {player.name}: Poin Kartu Jadi ({meld_sum}) + "
-                        f"Bonus Buang {target.id} ({self._closing_card_value(target)}) x Wild '{self.wildcard_rank}' "
-                        f"({self._wildcard_value()}) = +{bonus} Poin (Total: +{meld_sum + bonus})!"
+                        f"Bonus Buang {target.id} ({bonus} Poin) = +{meld_sum + bonus} Poin!"
                     )
 
                 # PENALTI UMPAN TUTUP:
                 # Jika pemain yang tutup mengambil kartu buangan pada giliran ini,
-                # pemain yang membuang kartu tersebut mendapat penalti: Number card -50, Face card -100, As -150!
+                # penalti HANYA berlaku jika kartu buangan yang dimakan berasal dari
+                # pemain tepat sebelum pemain yang turun tangan (pemain sebelumnya)!
                 feeder_seat: Optional[int] = None
                 feeder_card: Optional[Card] = None
                 feed_penalty: int = 0
                 if self.turn_taken_discard_card is not None and self.turn_taken_discarder_seat is not None:
-                    if self.turn_taken_discarder_seat != seat:
+                    prev_seat = (seat - 1) % len(self.players)
+                    if self.turn_taken_discarder_seat == prev_seat:
                         feeder_seat = self.turn_taken_discarder_seat
                         feeder_card = self.turn_taken_discard_card
                         feed_penalty = self._compute_feed_penalty(feeder_card)
@@ -1624,6 +1673,16 @@ class RemiGameMatch:
         self.status_message = (
             f"{player.name} membuang {target.id}. Sekarang GILIRAN {next_p.name.upper()}!"
         )
+        self.state_version = getattr(self, "state_version", 0) + 1
+        if not hasattr(self, "ceki_counts"):
+            self.ceki_counts = {}
+        if not self.check_is_ceki(seat):
+            self.ceki_counts[seat] = 0
+        if not hasattr(self, "turn_state_history"):
+            self.turn_state_history = []
+        self.turn_state_history.append(self.to_state_dict(viewer_seat=None, is_snapshot=True))
+        if len(self.turn_state_history) > len(self.players) * 4:
+            self.turn_state_history.pop(0)
         return True, self.status_message
 
     # ------------------------------------------------------------------
@@ -1654,10 +1713,21 @@ class RemiGameMatch:
         return 5
 
     def compute_tutup_biasa_bonus(self, closing_discard: Optional[Card]) -> int:
-        """Bonus Tutup Biasa = nilai kartu buangan penutup x nilai Wild Card (contoh: K=10 x Wild angka=5 -> +50)."""
+        """
+        Bonus Tutup Biasa (kecuali Tutup Tangan Murni dan Tris-Four yang bernilai +250 Poin):
+        Nilai kartu buangan penutup:
+        - Number card (2-10): 50 Poin
+        - Face card (J, Q, K): 100 Poin
+        - As (A): 150 Poin
+        """
         if closing_discard is None:
             return 0
-        return self._closing_card_value(closing_discard) * self._wildcard_value()
+        if closing_discard.rank == "A":
+            return 150
+        elif closing_discard.rank in ("K", "Q", "J"):
+            return 100
+        else:
+            return 50
 
     def _finish_round(
         self,
@@ -1671,6 +1741,7 @@ class RemiGameMatch:
     ):
         self.round_closer_seat = closer_seat
         self.round_closed_by_tutup_tangan = is_tutup_tangan
+        scores_before = {p.seat: p.total_score for p in self.players}
 
         for p in self.players:
             already_safe = has_valid_seri_or_ace_meld(p.melds, self.wildcard_rank)
@@ -1760,7 +1831,33 @@ class RemiGameMatch:
                 "burned": p.burned_last_round,
                 "round_net": round_net,
                 "total_score": p.total_score,
+                "terbalap": False,
+                "terbalap_by": "",
             }
+
+        # ATURAN BALAP SKOR:
+        # Jika ada pemain yang di balap skor nya, pemain yang terbalap skornya menjadi 0!
+        scores_after = {p.seat: p.total_score for p in self.players}
+        overtaken_seats = set()
+        overtaken_by = {}
+        for y_seat, p_y in enumerate(self.players):
+            if scores_before[y_seat] > 0:
+                for x_seat, p_x in enumerate(self.players):
+                    if x_seat != y_seat:
+                        # Pemain X tadinya di belakang atau sama dengan Y,
+                        # tetapi setelah ronde ini total skor X melampaui total skor Y!
+                        if scores_before[x_seat] <= scores_before[y_seat] and scores_after[x_seat] > scores_after[y_seat]:
+                            overtaken_seats.add(y_seat)
+                            overtaken_by[y_seat] = p_x.name
+                            break
+
+        for s in overtaken_seats:
+            p = self.players[s]
+            p.total_score = 0
+            p.last_round_breakdown["terbalap"] = True
+            p.last_round_breakdown["terbalap_by"] = overtaken_by.get(s, "")
+            p.last_round_breakdown["total_score"] = 0
+            reason += f" | ⚠️ SKOR TERBALAP: {p.name} dibalap oleh {overtaken_by.get(s, '')}, total skor di-reset menjadi 0 Poin!"
 
         # Simpan riwayat lengkap ronde (skor, kartu jadi, dan sisa tangan)
         round_entry = {
@@ -1946,7 +2043,29 @@ class RemiGameMatch:
     # ------------------------------------------------------------------
     # Serialisasi State
     # ------------------------------------------------------------------
-    def to_state_dict(self, viewer_seat: Optional[int] = None) -> dict:
+    def to_state_dict(
+        self,
+        viewer_seat: Optional[int] = None,
+        is_snapshot: bool = False,
+        spectator_delay: bool = False,
+    ) -> dict:
+        # Untuk spectator, berikan delay 1 putaran (len(self.players) turns)
+        delay_turns = len(self.players)
+        hist = getattr(self, "turn_state_history", [])
+        if (
+            not is_snapshot
+            and spectator_delay
+            and self.phase not in ("LOBBY", "ROUND_OVER", "MATCH_OVER")
+            and len(hist) > 0
+        ):
+            idx = -min(len(hist), delay_turns)
+            delayed_state = dict(hist[idx])
+            delayed_state["is_spectator"] = True
+            delayed_state["spectator_delayed"] = True
+            delayed_state["spectator_delay_turns"] = delay_turns
+            delayed_state["is_paused"] = getattr(self, "is_paused", False)
+            return delayed_state
+
         w_rank = self.wildcard_rank
         return {
             "room_code": self.room_code,
@@ -1975,6 +2094,10 @@ class RemiGameMatch:
             "is_paused": getattr(self, "is_paused", False),
             "round_over_timer": round(self.round_over_timer, 1) if getattr(self, "round_over_timer", None) is not None else None,
             "round_history": getattr(self, "round_history", []),
+            "state_version": getattr(self, "state_version", 1),
+            "is_spectator": (viewer_seat is None),
+            "spectator_delayed": False,
+            "can_ceki": self.check_is_ceki(viewer_seat) if viewer_seat is not None else False,
             "players": [
                 {
                     "seat": p.seat,
@@ -1986,6 +2109,7 @@ class RemiGameMatch:
                     "auto_pilot": p.auto_pilot,
                     "burned_last_round": p.burned_last_round,
                     "has_seri": has_valid_seri_or_ace_meld(p.melds, w_rank) or is_valid_tris_four_melds(p.melds, w_rank),
+                    "is_ceki": self.check_is_ceki(p.seat),
                     "can_tutup_tangan": (
                         self.check_can_declare_tutup_tangan(p.seat)[0]
                         if (viewer_seat is None or viewer_seat == p.seat)

@@ -1222,6 +1222,43 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border-color: rgba(255, 255, 255, 0.35);
   }
 
+  .badge-ceki-glow {
+    display: inline-block;
+    background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid #fde047;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 16px rgba(245, 158, 11, 0.6);
+    animation: ceki-pulsing 0.9s infinite alternate ease-in-out;
+  }
+  @keyframes ceki-pulsing {
+    0% { transform: scale(0.95); box-shadow: 0 0 6px rgba(239, 68, 68, 0.7); }
+    100% { transform: scale(1.08); box-shadow: 0 0 18px rgba(245, 158, 11, 1), 0 0 24px rgba(239, 68, 68, 0.9); }
+  }
+  .btn-ceki-ready {
+    animation: ceki-btn-pulse 1.1s infinite alternate ease-in-out !important;
+  }
+  @keyframes ceki-btn-pulse {
+    0% { transform: scale(0.98); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+    100% { transform: scale(1.04); box-shadow: 0 0 20px rgba(251, 191, 36, 0.9), 0 0 30px rgba(239, 68, 68, 0.7); }
+  }
+  .spectator-banner {
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    padding: 3px 12px;
+    border-radius: 15px;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    display: inline-block;
+  }
+
   /* MODALS & OVERLAYS */
   .modal-overlay {
     position: fixed;
@@ -2354,9 +2391,10 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
   const isLeader = (leaderSeat !== null && leaderSeat !== undefined && p.seat === leaderSeat && (latestState && (latestState.round_number > 1 || p.total_score > 0)));
   const leaderTag = isLeader ? ' <span style="color:#facc15;font-size:0.85em;">[👑 SKOR TERTINGGI]</span>' : '';
   const burnTag = p.burned_last_round ? ' <span style="color:#f87171;">[TERBAKAR!]</span>' : '';
+  const cekiTag = p.is_ceki ? ' <span class="badge-ceki-glow">🔥 CEKI!</span>' : '';
 
   if (titleEl) {
-    titleEl.innerHTML = `${badgeHTML}${p.name}${leaderTag}${burnTag} • Skor: ${p.total_score}/${targetScore} (${p.last_round_score >= 0 ? '+' : ''}${p.last_round_score})`;
+    titleEl.innerHTML = `${badgeHTML}${p.name}${cekiTag}${leaderTag}${burnTag} • Skor: ${p.total_score}/${targetScore} (${p.last_round_score >= 0 ? '+' : ''}${p.last_round_score})`;
   }
 
   let handHTML = '';
@@ -2449,6 +2487,7 @@ function updateUI(st) {
     lastHandledCekiTime = st.latest_ceki.timestamp;
     if (st.latest_ceki.seat !== mySeat) {
       showCekiBubble(st.latest_ceki.seat);
+      playCekiMediaAudio(st.latest_ceki.count || 1);
     }
   }
 
@@ -2689,21 +2728,23 @@ function updateUI(st) {
 
   // Render Opponents
   const n = st.players.length;
+  const isSpec = Boolean(mySeat === null || st.is_spectator || spectatorMode);
+  const showOpponentFace = Boolean(isSpec || st.show_bot_hands);
   if (n === 2) {
-    renderOpponentZone('top', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('top', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
     document.getElementById('zone-left').style.display = 'none';
     document.getElementById('zone-right').style.display = 'none';
   } else if (n === 3) {
-    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
-    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
     document.getElementById('zone-left').style.display = 'flex';
     document.getElementById('zone-right').style.display = 'none';
   } else {
     document.getElementById('zone-left').style.display = 'flex';
     document.getElementById('zone-right').style.display = 'flex';
-    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, st.show_bot_hands, st.target_score, leaderSeat);
-    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, st.show_bot_hands, st.target_score, leaderSeat);
-    renderOpponentZone('right', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, st.show_bot_hands, st.target_score, leaderSeat);
+    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('right', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
   }
 
   // Render Player Zone
@@ -2711,10 +2752,12 @@ function updateUI(st) {
     const isLeader = (leaderSeat !== null && leaderSeat !== undefined && activeSeat === leaderSeat && (st.round_number > 1 || p0.total_score > 0));
     const leaderTag = isLeader ? ' [👑 SKOR TERTINGGI]' : '';
     const burnTag = p0.burned_last_round ? ' [TERBAKAR!]' : '';
-    const seatLabel = (mySeat !== null) ? `Kursi ${activeSeat + 1}` : `Kursi ${activeSeat + 1} (Mode Penonton)`;
-    const editNameSpan = (mySeat !== null) ? ` <span style="font-size:10px;color:#38bdf8;cursor:pointer;text-decoration:underline;" onclick="changePlayerNamePrompt()">✎ Ganti Nama</span>` : '';
+    const cekiTag = p0.is_ceki ? ' <span class="badge-ceki-glow">🔥 CEKI!</span>' : '';
+    const specBanner = isSpec ? ` <span class="spectator-banner">👁️ PENONTON (DELAY 1 PUTARAN • SEMUA KARTU TERBUKA)</span>` : '';
+    const seatLabel = !isSpec ? `Kursi ${activeSeat + 1}` : `Kursi ${activeSeat + 1} (Mode Penonton)`;
+    const editNameSpan = !isSpec ? ` <span style="font-size:10px;color:#38bdf8;cursor:pointer;text-decoration:underline;" onclick="changePlayerNamePrompt()">✎ Ganti Nama</span>` : '';
     document.getElementById('my-info').innerHTML =
-      `${seatLabel} | ${p0.name}${leaderTag}${burnTag} | Skor: ${p0.total_score} / ${st.target_score} (${p0.last_round_score >= 0 ? '+' : ''}${p0.last_round_score})${editNameSpan}`;
+      `${seatLabel} | ${p0.name}${cekiTag}${leaderTag}${burnTag}${specBanner} | Skor: ${p0.total_score} / ${st.target_score} (${p0.last_round_score >= 0 ? '+' : ''}${p0.last_round_score})${editNameSpan}`;
 
     const actBar = document.getElementById('action-bar');
     if (actBar) {
@@ -2824,6 +2867,32 @@ function updateUI(st) {
       }
     }
   }
+
+  // Update Status & Validasi Tombol CEKI
+  const btnCeki = document.getElementById('btn-ceki');
+  if (btnCeki) {
+    const curP0 = (latestState && latestState.players && mySeat !== null) ? latestState.players[mySeat] : (latestState && latestState.players ? latestState.players[0] : null);
+    const canCeki = Boolean(curP0 && curP0.is_ceki);
+    if (!btnCeki.classList.contains('btn-cooldown')) {
+      btnCeki.disabled = !canCeki;
+      if (canCeki) {
+        btnCeki.title = "Serukan CEKI! (C) - Sisa 1 kartu buangan atau siap menutup tangan";
+        btnCeki.style.opacity = '1';
+        btnCeki.style.cursor = 'pointer';
+        btnCeki.classList.add('btn-ceki-ready');
+      } else {
+        btnCeki.title = "Tombol CEKI hanya aktif jika kartu buangan sisa satu atau akan menutup tangan!";
+        btnCeki.style.opacity = '0.4';
+        btnCeki.style.cursor = 'not-allowed';
+        btnCeki.classList.remove('btn-ceki-ready');
+      }
+    }
+    const isNowCeki = Boolean(curP0 && curP0.is_ceki);
+    if (!isNowCeki && wasCeki) {
+      myCekiClickCount = 0;
+    }
+    wasCeki = isNowCeki;
+  }
 }
 
 function toggleCard(cardId) {
@@ -2928,14 +2997,24 @@ function togglePause() {
   sendAction('TOGGLE_PAUSE');
 }
 
-// Fitur Tombol & Bubble CEKI (Cooldown 2 Detik)
+// Fitur Tombol & Bubble CEKI (Cooldown 2 Detik & Audio Berantai)
 let lastCekiTime = 0;
 let lastHandledCekiTime = 0;
+let myCekiClickCount = 0;
+let wasCeki = false;
 
 function triggerCeki() {
+  const curP0 = (latestState && latestState.players && mySeat !== null) ? latestState.players[mySeat] : (latestState && latestState.players ? latestState.players[0] : null);
+  if (curP0 && !curP0.is_ceki) {
+    alert("Tombol CEKI hanya bisa diklik jika kartu Anda sisa 1 buangan atau akan menutup tangan!");
+    return;
+  }
   const now = Date.now();
   if (now - lastCekiTime < 2000) return;
   lastCekiTime = now;
+
+  myCekiClickCount++;
+  const activeCount = myCekiClickCount;
 
   const btn = document.getElementById('btn-ceki');
   if (btn) {
@@ -2946,7 +3025,8 @@ function triggerCeki() {
       const remaining = Math.max(0, (2000 - (Date.now() - start)) / 1000);
       if (remaining <= 0) {
         clearInterval(interval);
-        btn.disabled = false;
+        const checkP0 = (latestState && latestState.players && mySeat !== null) ? latestState.players[mySeat] : null;
+        btn.disabled = !Boolean(checkP0 && checkP0.is_ceki);
         btn.classList.remove('btn-cooldown');
         btn.innerHTML = '📢 CEKI (C)';
       } else {
@@ -2955,8 +3035,21 @@ function triggerCeki() {
     }, 100);
   }
 
-  sendAction('CEKI');
+  sendAction('CEKI', { ceki_count: activeCount });
+  playCekiMediaAudio(activeCount);
   showCekiBubble(mySeat !== null ? mySeat : 0);
+}
+
+function playCekiMediaAudio(count) {
+  try {
+    const audioSrc = (count <= 1) ? '/audio/main_edit.mp4' : '/audio/main_edit_1.mp4';
+    const audio = new Audio(audioSrc);
+    audio.play().catch(e => {
+      playCekiAudio();
+    });
+  } catch(e) {
+    playCekiAudio();
+  }
 }
 
 function getZoneElementForSeat(seat) {
@@ -3873,26 +3966,44 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(1); }
 });
 
-// Real-time Polling (Instant Fetch on Load + 300ms Heartbeat)
+// Real-time Polling (Smart Heartbeat dengan Versioning & Background Throttling)
+let lastStateVersion = 0;
 async function pollState() {
   try {
     const qParams = new URLSearchParams();
     if (mySeat !== null) qParams.set('seat', mySeat);
     if (myPlayerId) qParams.set('pid', myPlayerId);
+    if (lastStateVersion) qParams.set('ver', lastStateVersion);
     const res = await fetch(`/api/state?${qParams.toString()}`);
     const data = await res.json();
-    if (data.state) updateUI(data.state);
+    if (data.unchanged) {
+      if (data.time_left !== undefined && latestState) {
+        latestState.turn_remaining_sec = data.time_left;
+      }
+      return;
+    }
+    if (data.state) {
+      lastStateVersion = data.state.state_version || 0;
+      updateUI(data.state);
+    }
   } catch (e) {}
 }
 pollState();
-setInterval(pollState, 300);
+let pollIntervalMs = 800;
+let pollTimer = setInterval(pollState, pollIntervalMs);
+document.addEventListener('visibilitychange', () => {
+  clearInterval(pollTimer);
+  pollIntervalMs = document.hidden ? 2500 : 800;
+  pollTimer = setInterval(pollState, pollIntervalMs);
+});
 </script>
 </body>
 </html>"""
 
 def _format_state_dict(seat: Optional[int]) -> dict:
-    viewer_seat = seat if (seat is not None and 0 <= seat < len(GAME.players)) else 0
-    st = GAME.to_state_dict(viewer_seat=viewer_seat)
+    is_spec = (seat is None or not (0 <= seat < len(GAME.players)))
+    viewer_seat = seat if not is_spec else None
+    st = GAME.to_state_dict(viewer_seat=viewer_seat, spectator_delay=is_spec)
     st["host_ip"] = get_local_ip()
     st["server_port"] = 8080
     st["deck_count"] = st.get("draw_pile_count", 0)
@@ -3915,11 +4026,36 @@ class RemiWebHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/audio/"):
+            fname = os.path.basename(parsed.path)
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            audio_path = os.path.join(base_dir, "assets", "audio", fname)
+            if not os.path.exists(audio_path):
+                audio_path = os.path.join(os.getcwd(), "assets", "audio", fname)
+            if os.path.exists(audio_path):
+                try:
+                    with open(audio_path, "rb") as af:
+                        content = af.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "video/mp4")
+                    self.send_header("Content-Length", str(len(content)))
+                    self.send_header("Accept-Ranges", "bytes")
+                    self.send_header("Cache-Control", "public, max-age=86400")
+                    self.end_headers()
+                    self.wfile.write(content)
+                except Exception:
+                    pass
+                return
+            else:
+                self.send_error(404, f"File {fname} not found")
+                return
+
         if parsed.path == "/api/state":
             qs = parse_qs(parsed.query)
             seat_param = qs.get("seat", [None])[0]
             seat = int(seat_param) if (seat_param is not None and str(seat_param).isdigit()) else None
             player_id = qs.get("pid", [""])[0].strip()
+            client_ver = qs.get("ver", [None])[0]
             with GAME_LOCK:
                 now = time.time()
                 if player_id:
@@ -3951,7 +4087,14 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                                 GAME.status_message = f"Pemain di Kursi {idx + 1} terputus dan otomatis digantikan oleh {p.name}."
 
                 tick_game_state_locked()
+                cur_v = getattr(GAME, "state_version", 1)
+                latest_ceki_time = getattr(GAME, "latest_ceki", {}).get("timestamp", 0) if getattr(GAME, "latest_ceki", None) else 0
+                has_active_ceki = (time.time() - latest_ceki_time) < 2.5
+                if client_ver and str(client_ver) == str(cur_v) and GAME.phase not in ("ROUND_OVER", "MATCH_OVER") and not has_active_ceki:
+                    self._send_json({"unchanged": True, "v": cur_v, "time_left": round(GAME.turn_remaining_sec, 1)})
+                    return
                 st = _format_state_dict(seat)
+                st["state_version"] = cur_v
             self._send_json({"state": st})
             return
         if parsed.path == "/api/config":
@@ -4157,15 +4300,21 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     payload.get("target_card_id", ""),
                 )
             elif action == "CEKI":
-                now = time.time()
-                last_t = getattr(GAME, "last_ceki_times", {}).get(seat, 0.0)
-                if now - last_t >= 1.9:
-                    if not hasattr(GAME, "last_ceki_times"):
-                        GAME.last_ceki_times = {}
-                    GAME.last_ceki_times[seat] = now
-                    p_name = GAME.players[seat].name if seat < len(GAME.players) else f"Pemain {seat+1}"
-                    GAME.status_message = f"📢 {p_name} berseru: CEKI!"
-                    GAME.latest_ceki = {"seat": seat, "timestamp": now, "name": p_name}
+                if 0 <= seat < len(GAME.players) and GAME.check_is_ceki(seat):
+                    now = time.time()
+                    last_t = getattr(GAME, "last_ceki_times", {}).get(seat, 0.0)
+                    if now - last_t >= 1.8:
+                        if not hasattr(GAME, "last_ceki_times"):
+                            GAME.last_ceki_times = {}
+                        GAME.last_ceki_times[seat] = now
+                        if not hasattr(GAME, "ceki_counts"):
+                            GAME.ceki_counts = {}
+                        GAME.ceki_counts[seat] = GAME.ceki_counts.get(seat, 0) + 1
+                        count = GAME.ceki_counts[seat]
+                        p_name = GAME.players[seat].name
+                        GAME.status_message = f"📢 {p_name} berseru: CEKI!"
+                        GAME.latest_ceki = {"seat": seat, "timestamp": now, "name": p_name, "count": count}
+                        GAME.state_version = getattr(GAME, "state_version", 1) + 1
 
             st = _format_state_dict(seat)
 
