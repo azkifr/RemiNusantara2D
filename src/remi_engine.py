@@ -1327,11 +1327,71 @@ class RemiGameMatch:
             return True, f"Posisi kartu {source_cid} berhasil dipindahkan."
         return False, "Gagal mengubah urutan kartu."
 
+    def _seat_cache_key(self, seat: int) -> tuple:
+        """Kunci cache ringan: berubah hanya jika kondisi yang memengaruhi evaluasi tangan pemain berubah."""
+        p = self.players[seat]
+        tdc = self.turn_taken_discard_card
+        return (
+            seat,
+            self.phase,
+            self.current_turn_seat,
+            self.wildcard_rank,
+            tuple(c.id for c in p.hand),
+            tuple(tuple(c.id for c in m) for m in p.melds),
+            tdc.id if tdc is not None else None,
+            self.forbidden_discard_card_id,
+            self.melds_count_at_turn_start,
+        )
+
+    def _cache_get(self, name: str, key: tuple):
+        cache = self.__dict__.setdefault("_eval_cache", {})
+        return cache.get((name, key), None)
+
+    def _cache_set(self, name: str, key: tuple, value):
+        cache = self.__dict__.setdefault("_eval_cache", {})
+        if len(cache) > 256:
+            cache.clear()
+        cache[(name, key)] = value
+        return value
+
+    def compute_view_signature(self) -> str:
+        """Sidik jari state yang murah dihitung untuk polling (deteksi perubahan tanpa membangun payload penuh)."""
+        sig = (
+            getattr(self, "state_version", 0),
+            self.phase,
+            self.current_turn_seat,
+            self.round_number,
+            len(self.draw_pile),
+            tuple(c.id for c in self.discard_pile),
+            self.status_message,
+            getattr(self, "is_paused", False),
+            tuple(
+                (
+                    p.name, p.is_bot, p.auto_pilot, p.total_score,
+                    tuple(c.id for c in p.hand),
+                    tuple(tuple(c.id for c in m) for m in p.melds),
+                )
+                for p in self.players
+            ),
+        )
+        return str(hash(sig) & 0xFFFFFFFFFFFF)
+
     def check_can_close_round(self, seat: int, preferred_discard_id: Optional[str] = None) -> Tuple[bool, bool, Optional[str]]:
         """
         Mengecek apakah pemain saat ini dapat menutup ronde (Tutup Tangan Murni atau Tutup Biasa).
         Returns: (can_close, is_tutup_tangan_murni, closing_discard_id)
         """
+        if self.phase != "TURN_MELD_DISCARD" or seat != self.current_turn_seat:
+            return False, False, None
+        if preferred_discard_id is None:
+            key = self._seat_cache_key(seat)
+            cached = self._cache_get("close", key)
+            if cached is not None:
+                return cached
+            return self._cache_set("close", key, self._check_can_close_round_uncached(seat, None))
+        return self._check_can_close_round_uncached(seat, preferred_discard_id)
+
+    def _check_can_close_round_uncached(self, seat: int, preferred_discard_id: Optional[str] = None) -> Tuple[bool, bool, Optional[str]]:
         if self.phase != "TURN_MELD_DISCARD" or seat != self.current_turn_seat:
             return False, False, None
 
@@ -1418,42 +1478,65 @@ class RemiGameMatch:
 
     def check_is_ceki(self, seat: int) -> bool:
         """
-        Mengecek apakah pemain berada dalam kondisi CEKI:
-        - Kartu buangan sisa 1 (seluruh kartu lain membentuk kombinasi sah dengan minimal 1 Seri / Tris As).
-        - Atau pemain siap/akan menutup tangan pada gilirannya.
+        Mengecek apakah pemain berada dalam kondisi CEKI (kurang 1 kartu lagi untuk tutup):
+        - Pada giliran susun/buang: pemain sudah bisa menutup sekarang.
+        - Saat menunggu / tahap ambil: jika ditambah SATU kartu apa pun (diuji dengan Joker virtual
+          yang bisa menggantikan kartu apa saja), tangan bisa langsung ditutup (sisa 1 buangan).
+        Hasil di-cache agar polling tidak membebani server.
         """
         if self.phase in ("LOBBY", "ROUND_OVER", "MATCH_OVER"):
             return False
-        if seat < 0 or seat >= len(self.players):
+        if seat is None or seat < 0 or seat >= len(self.players):
             return False
-        p = self.players[seat]
-        already_safe = has_valid_seri_or_ace_meld(p.melds, self.wildcard_rank)
 
         # 1. Pada gilirannya di tahap susun/buang:
         if self.phase == "TURN_MELD_DISCARD" and self.current_turn_seat == seat:
             can_close, _, _ = self.check_can_close_round(seat)
             return can_close
 
-        # 2. Pada tahap lain atau menunggu giliran (di tangan biasanya 7 kartu):
+        p = self.players[seat]
         if not p.hand:
             return False
+        key = self._seat_cache_key(seat)
+        cached = self._cache_get("ceki", key)
+        if cached is not None:
+            return cached
+        return self._cache_set("ceki", key, self._evaluate_waiting_ceki(p))
+
+    def _evaluate_waiting_ceki(self, p: "PlayerState") -> bool:
+        already_safe = has_valid_seri_or_ace_meld(p.melds, self.wildcard_rank)
+        virtual_card = Card(id="__CEKI_VIRTUAL__", rank="JOKER", suit="J")
+        test_hand = list(p.hand) + [virtual_card]
 
         for cand_discard in p.hand:
-            others = [c for c in p.hand if c.id != cand_discard.id]
-            if not others:
-                if p.melds and already_safe:
-                    return True
-                continue
+            others = [c for c in test_hand if c.id != cand_discard.id]
             melds, rem = find_best_melds_in_hand(
                 others,
                 wildcard_rank=self.wildcard_rank,
                 already_has_seri=already_safe,
             )
             comb = [list(m) for m in p.melds] + [list(m) for m in melds]
+            # Coba tempelkan sisa kartu ke kombinasi yang sudah ada (layoff)
+            if comb and rem:
+                changed = True
+                while changed and rem:
+                    changed = False
+                    for c in list(rem):
+                        for m_idx in range(len(comb)):
+                            val_m = validate_meld(comb[m_idx] + [c], wildcard_rank=self.wildcard_rank)
+                            if val_m.valid:
+                                comb[m_idx] = val_m.ordered_cards
+                                rem.remove(c)
+                                changed = True
+                                break
             if (
                 len(rem) == 0
                 and len(comb) > 0
-                and (already_safe or has_valid_seri_or_ace_meld(comb, self.wildcard_rank))
+                and (
+                    already_safe
+                    or has_valid_seri_or_ace_meld(comb, self.wildcard_rank)
+                    or is_valid_tris_four_melds(comb, self.wildcard_rank)
+                )
             ):
                 return True
         return False

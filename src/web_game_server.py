@@ -3035,19 +3035,38 @@ function triggerCeki() {
     }, 100);
   }
 
-  sendAction('CEKI', { ceki_count: activeCount });
   playCekiMediaAudio(activeCount);
   showCekiBubble(mySeat !== null ? mySeat : 0);
+  sendAction('CEKI', { ceki_count: activeCount });
 }
 
-function playCekiMediaAudio(count) {
+// Preload audio CEKI sekali saja (tidak membuat request baru setiap klik)
+const CEKI_AUDIO_SRC = ['/audio/main_edit.mp4', '/audio/main_edit_1.mp4'];
+const cekiAudioPool = CEKI_AUDIO_SRC.map(src => {
   try {
-    const audioSrc = (count <= 1) ? '/audio/main_edit.mp4' : '/audio/main_edit_1.mp4';
-    const audio = new Audio(audioSrc);
-    audio.play().catch(e => {
-      playCekiAudio();
-    });
-  } catch(e) {
+    const a = new Audio(src);
+    a.preload = 'auto';
+    a.volume = 1.0;
+    a.load();
+    return a;
+  } catch (e) { return null; }
+});
+
+function playCekiMediaAudio(count) {
+  const idx = (count <= 1) ? 0 : 1;
+  const base = cekiAudioPool[idx];
+  try {
+    if (!base) { playCekiAudio(); return; }
+    base.pause();
+    base.currentTime = 0;
+    const p = base.play();
+    if (p && p.catch) {
+      p.catch(err => {
+        console.warn('CEKI audio gagal diputar:', err);
+        playCekiAudio();
+      });
+    }
+  } catch (e) {
     playCekiAudio();
   }
 }
@@ -3966,15 +3985,19 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(1); }
 });
 
-// Real-time Polling (Smart Heartbeat dengan Versioning & Background Throttling)
+// Real-time Polling (Smart Heartbeat dengan Versioning, Anti-Tumpuk Request & Background Throttling)
 let lastStateVersion = 0;
+let lastStateSeat = null;
+let pollInFlight = false;
 async function pollState() {
+  if (pollInFlight) return;  // jangan menumpuk request jika server sedang lambat
+  pollInFlight = true;
   try {
     const qParams = new URLSearchParams();
     if (mySeat !== null) qParams.set('seat', mySeat);
     if (myPlayerId) qParams.set('pid', myPlayerId);
-    if (lastStateVersion) qParams.set('ver', lastStateVersion);
-    const res = await fetch(`/api/state?${qParams.toString()}`);
+    if (lastStateVersion && lastStateSeat === mySeat) qParams.set('ver', lastStateVersion);
+    const res = await fetch(`/api/state?${qParams.toString()}`, { cache: 'no-store' });
     const data = await res.json();
     if (data.unchanged) {
       if (data.time_left !== undefined && latestState) {
@@ -3984,17 +4007,22 @@ async function pollState() {
     }
     if (data.state) {
       lastStateVersion = data.state.state_version || 0;
+      lastStateSeat = mySeat;
       updateUI(data.state);
     }
-  } catch (e) {}
+  } catch (e) {
+  } finally {
+    pollInFlight = false;
+  }
 }
 pollState();
-let pollIntervalMs = 800;
+let pollIntervalMs = 400;
 let pollTimer = setInterval(pollState, pollIntervalMs);
 document.addEventListener('visibilitychange', () => {
   clearInterval(pollTimer);
-  pollIntervalMs = document.hidden ? 2500 : 800;
+  pollIntervalMs = document.hidden ? 2500 : 400;
   pollTimer = setInterval(pollState, pollIntervalMs);
+  if (!document.hidden) pollState();
 });
 </script>
 </body>
@@ -4087,7 +4115,7 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                                 GAME.status_message = f"Pemain di Kursi {idx + 1} terputus dan otomatis digantikan oleh {p.name}."
 
                 tick_game_state_locked()
-                cur_v = getattr(GAME, "state_version", 1)
+                cur_v = GAME.compute_view_signature()
                 latest_ceki_time = getattr(GAME, "latest_ceki", {}).get("timestamp", 0) if getattr(GAME, "latest_ceki", None) else 0
                 has_active_ceki = (time.time() - latest_ceki_time) < 2.5
                 if client_ver and str(client_ver) == str(cur_v) and GAME.phase not in ("ROUND_OVER", "MATCH_OVER") and not has_active_ceki:
