@@ -2200,24 +2200,32 @@ HTML_PAGE = r"""<!DOCTYPE html>
     overflow-x: auto;
     overflow-y: hidden;
   }
+  .meld-group,
   .opp-melds-box .meld-group,
   #my-melds .meld-group {
-    height: 100%;
-    flex-wrap: nowrap;
-    align-items: center;
-    flex-shrink: 0;
-    padding: 2px 4px;
-    box-sizing: border-box;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    height: 100% !important;
+    flex-shrink: 0 !important;
+    padding: 2px 6px !important;
+    background: rgba(22, 101, 52, 0.22) !important;
+    border: 1px solid rgba(74, 222, 128, 0.28) !important;
+    border-radius: 7px !important;
+    box-sizing: border-box !important;
   }
   .opp-melds-box .card.small,
-  #my-melds .card.small {
-    height: 100cqh !important;
-    width: auto !important;
-    border-radius: 6px !important;
-  }
+  #my-melds .card.small,
   .opp-melds-box .meld-group .card.small,
   #my-melds .meld-group .card.small {
-    height: calc(100cqh - 7px) !important;
+    height: calc(100% - 2px) !important;
+    max-height: calc(100cqh - 6px) !important;
+    width: auto !important;
+    aspect-ratio: 5 / 7 !important;
+    flex-shrink: 0 !important;
+    border-radius: 6px !important;
   }
   .opp-melds-box .meld-empty-hint { margin: 0 auto; }
 
