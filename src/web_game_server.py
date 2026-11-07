@@ -143,28 +143,27 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* MEJA PERMAINAN ROYALE - 2 ATAS 2 BAWAH ARCHITECTURE */
   #table {
     flex: 1;
-    margin: 4px 8px;
+    margin: 2px 6px;
     border: 7px solid var(--wood-rail);
-    border-radius: 22px;
-    box-shadow: inset 0 0 60px rgba(0,0,0,0.85), 0 10px 30px rgba(0,0,0,0.9);
+    border-radius: 20px;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.88), 0 10px 30px rgba(0,0,0,0.92);
     outline: 1.5px solid rgba(250, 204, 21, 0.25);
     outline-offset: -4px;
     background: radial-gradient(ellipse at 50% 50%, var(--felt-center) 0%, var(--felt-mid) 54%, var(--felt-dark) 100%);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    gap: 6px;
     padding: 6px 14px 6px 14px;
     position: relative;
-    min-height: 94vh;
+    height: calc(100vh - 8px);
     max-height: calc(100vh - 8px);
-    overflow-y: auto;
-    overflow-x: hidden;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   /* TOP HEADER HUD */
   .header-bar {
-    grid-column: 1 / 4;
-    grid-row: 1 / 2;
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -283,9 +282,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #opponents-top-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
     flex-shrink: 0;
+    height: clamp(72px, 12vh, 88px);
+    box-sizing: border-box;
   }
 
   .opp-pod {
@@ -341,26 +342,30 @@ HTML_PAGE = r"""<!DOCTYPE html>
     gap: 4px;
   }
 
-  /* CENTER ARENA: FULL-WIDTH ROYALE FELT */
+  /* CENTER ARENA: FULL-WIDTH ROYALE FELT (100% WIDE DISCARD RAIL) */
   #zone-center {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 14px;
-    padding: 4px 0;
+    padding: 2px 0;
     width: 100%;
     flex: 1;
-    min-height: 175px;
+    min-height: clamp(140px, 24vh, 185px);
+    max-height: 205px;
+    box-sizing: border-box;
   }
 
   /* BOTTOM ROW: 2 PLAYERS (Opponent 3 + Player 1) */
   #players-bottom-row {
     display: grid;
-    grid-template-columns: minmax(240px, 310px) 1fr;
-    gap: 10px;
+    grid-template-columns: minmax(250px, 320px) 1fr;
+    gap: 12px;
     width: 100%;
     align-items: stretch;
     flex-shrink: 0;
+    height: clamp(175px, 28vh, 230px);
+    box-sizing: border-box;
   }
   .opp-pod-bottom {
     height: 100%;
@@ -374,7 +379,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: space-between;
+    gap: 3px;
     padding: 6px 14px 4px 14px;
     background: rgba(3, 24, 15, 0.88);
     backdrop-filter: blur(14px);
@@ -384,6 +390,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     position: relative;
     transition: all 0.25s ease;
     width: 100%;
+    height: 100%;
+    box-sizing: border-box;
   }
   /* PROMINENT PLAYER TURN HIGHLIGHT: BORDER GOLD PULSE */
   #zone-bottom.my-turn-active {
@@ -516,8 +524,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* PAK KARTU (Draw Deck 3D) */
   #pak-box {
-    width: clamp(88px, 7vw, 100px);
-    height: clamp(168px, 12.6vw, 186px);
+    width: clamp(82px, 6.6vw, 98px);
+    height: clamp(140px, 24vh, 185px);
     background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
     border: 2px solid #fbbf24;
     border-radius: 12px;
@@ -555,8 +563,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: clamp(88px, 7vw, 100px);
-    height: clamp(168px, 12.6vw, 186px);
+    width: clamp(82px, 6.6vw, 98px);
+    height: clamp(140px, 24vh, 185px);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(192, 132, 252, 0.3);
     flex-shrink: 0;
   }
@@ -577,11 +585,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
     background: rgba(3, 24, 14, 0.92);
     border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 6px 10px 8px 10px;
+    padding: 5px 10px 6px 10px;
     flex: 1;
     min-width: 0;
-    min-height: 168px;
-    height: clamp(168px, 12.6vw, 186px);
+    max-width: 860px;
+    height: clamp(140px, 24vh, 185px);
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -932,10 +940,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding: 30px 14px 4px 14px;
+    padding: 22px 10px 2px 10px;
     width: 100%;
-    min-height: 165px;
+    height: clamp(125px, 20vh, 160px);
     position: relative;
+    box-sizing: border-box;
   }
   #my-hand .hand-card-slot {
     width: var(--hand-card-w);
@@ -1915,6 +1924,25 @@ HTML_PAGE = r"""<!DOCTYPE html>
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+  @media (max-height: 640px) {
+    :root {
+      --hand-card-w: clamp(72px, 6.8vw, 86px);
+      --hand-card-h: clamp(104px, 9.8vw, 124px);
+      --disc-card-w: clamp(58px, 5.2vw, 70px);
+      --disc-card-h: clamp(84px, 7.5vw, 102px);
+    }
+    #table { padding: 3px 8px; gap: 4px; }
+    #opponents-top-row { height: 68px; }
+    #zone-center { min-height: 125px; max-height: 155px; }
+    #pak-box, #wild-box, #discard-rail { height: 135px; }
+    #players-bottom-row { height: 160px; }
+    #my-hand { height: 115px; padding-top: 14px; }
+    .c-rank { font-size: 20px !important; }
+    .c-suit-mini { font-size: 16px !important; }
+    .c-center { font-size: 46px !important; }
+    .btn-action { height: 28px; padding: 0 8px; font-size: 10px; }
+  }
+
 </style>
 </head>
 <body>
@@ -2460,7 +2488,8 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
   const meldsEl = document.getElementById(`${prefix}-melds`);
 
   if (!zoneEl || !p) return;
-  zoneEl.className = 'zone-box' + (isTurn ? ' zone-active opponent-turn-active' : '');
+  const basePodClass = (prefix === 'bottom-left') ? 'zone-box opp-pod opp-pod-bottom' : 'zone-box opp-pod';
+  zoneEl.className = basePodClass + (isTurn ? ' zone-active opponent-turn-active' : '');
 
   const badgeHTML = isTurn ? `<span class="turn-badge" style="background:#38bdf8;color:#082f49;box-shadow:0 0 10px #38bdf8;">⏳ SEDANG JALAN...</span> ` : '';
   const isLeader = (leaderSeat !== null && leaderSeat !== undefined && p.seat === leaderSeat && (latestState && (latestState.round_number > 1 || p.total_score > 0)));
@@ -2549,7 +2578,7 @@ function updateUI(st) {
     return;
   } else {
     if (lobbyScreen) lobbyScreen.style.display = 'none';
-    if (tableScreen) tableScreen.style.display = 'grid';
+    if (tableScreen) tableScreen.style.display = 'flex';
   }
 
   const activeSeat = (mySeat !== null) ? mySeat : 0;
@@ -3886,7 +3915,7 @@ function spectateGame() {
   const lobbyScreen = document.getElementById('lobby-screen');
   const tableScreen = document.getElementById('table');
   if (lobbyScreen) lobbyScreen.style.display = 'none';
-  if (tableScreen) tableScreen.style.display = 'grid';
+  if (tableScreen) tableScreen.style.display = 'flex';
   showToast("Mode Penonton Aktif!");
 }
 
@@ -3902,7 +3931,7 @@ async function startLobbyGame() {
     const lobbyScreen = document.getElementById('lobby-screen');
     const tableScreen = document.getElementById('table');
     if (lobbyScreen) lobbyScreen.style.display = 'none';
-    if (tableScreen) tableScreen.style.display = 'grid';
+    if (tableScreen) tableScreen.style.display = 'flex';
     return;
   }
 
