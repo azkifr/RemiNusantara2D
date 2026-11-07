@@ -1972,6 +1972,275 @@ HTML_PAGE = r"""<!DOCTYPE html>
     }
   }
 
+  /* ======================================================== */
+  /* FILL-THE-BOX CARD SIZING (CONTAINER QUERIES)             */
+  /* Setiap kartu mengikuti tinggi kotaknya (hampir penuh),   */
+  /* tipografi kartu diskalakan relatif terhadap kartu itu.   */
+  /* ======================================================== */
+  #disc-active-cards, #disc-buried-cards,
+  .opp-count-box, .opp-melds-box,
+  #pak-box, #wild-box,
+  #my-hand, #my-melds {
+    container-type: size;
+  }
+
+  /* Kartu = container sendiri -> font kartu ikut tinggi kartu */
+  #disc-active-cards .card, #disc-buried-cards .card,
+  .opp-melds-box .card, .opp-count-box .card,
+  #wild-box .card, #my-hand .card, #my-melds .card {
+    container-type: size;
+    aspect-ratio: 5 / 7;
+  }
+  #disc-active-cards .card .c-corner-tl, #wild-box .card .c-corner-tl, #my-hand .card .c-corner-tl { top: 4cqh; left: 7cqw; }
+  #disc-active-cards .card .c-corner-br, #wild-box .card .c-corner-br, #my-hand .card .c-corner-br { bottom: 4cqh; right: 7cqw; }
+  #disc-active-cards .card .c-corner-br { display: none !important; } /* Sembunyikan corner BR di buangan agar badge AMBIL tidak bentrok */
+  #disc-active-cards .card .c-rank, #wild-box .card .c-rank, #my-hand .card .c-rank { font-size: 17cqh !important; letter-spacing: -0.04em; }
+  #disc-active-cards .card .c-suit-mini, #wild-box .card .c-suit-mini, #my-hand .card .c-suit-mini { font-size: 14cqh !important; margin-top: 1cqh; }
+  #disc-active-cards .card .c-center, #wild-box .card .c-center, #my-hand .card .c-center { font-size: 44cqh !important; }
+  #disc-active-cards .card .c-point-pill, #my-hand .card .c-point-pill { font-size: 7.5cqh; bottom: 4cqh; left: 6cqw; padding: 0.5cqh 5cqw; }
+  #disc-active-cards .card .c-badge-pill { font-size: 8.5cqh !important; bottom: 3cqh !important; padding: 0.6cqh 6cqw !important; }
+  #wild-box .card .c-wild-ribbon, #disc-active-cards .card .c-wild-ribbon, #my-hand .card .c-wild-ribbon { font-size: 7cqh; top: 4cqh; right: 5cqw; padding: 0.4cqh 6cqw; }
+  /* Kartu mini (kartu jadi / buangan terkubur) */
+  #disc-buried-cards .card .c-mini-top, .opp-melds-box .card .c-mini-top, .opp-count-box .card .c-mini-top, #my-melds .card .c-mini-top {
+    font-size: 21cqh !important; top: 4cqh !important; left: 8cqw !important; right: 8cqw !important;
+  }
+  #disc-buried-cards .card .c-mini-center, .opp-melds-box .card .c-mini-center, .opp-count-box .card .c-mini-center, #my-melds .card .c-mini-center {
+    font-size: 46cqh !important; top: 56% !important;
+  }
+  #disc-buried-cards .card .c-mini-bot, .opp-melds-box .card .c-mini-bot, .opp-count-box .card .c-mini-bot, #my-melds .card .c-mini-bot {
+    font-size: 11cqh !important; bottom: 3cqh !important; display: block !important;
+  }
+
+  /* ---------- 1. 7 KARTU BUANGAN AKTIF: isi tinggi baris ---------- */
+  #disc-active-cards {
+    gap: 6px;
+    padding: 7px 2px 3px 2px;
+    overflow-y: hidden;
+    align-items: center;
+  }
+  #disc-active-cards .card,
+  #disc-active-cards .disc-slot-placeholder {
+    height: min(100cqh, calc((100cqw - 36px) / 7 * 1.4)) !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: 5 / 7;
+    margin: 0 !important;
+    flex-shrink: 0;
+    border-radius: 7cqh;
+  }
+  #disc-active-cards .card { border-radius: 8px; }
+  .disc-slot-placeholder {
+    border: 1.5px dashed rgba(250, 204, 21, 0.28);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.28);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: rgba(250, 204, 21, 0.42);
+    user-select: none;
+    pointer-events: none;
+    box-sizing: border-box;
+  }
+  .disc-slot-placeholder .disc-slot-num { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; }
+  .disc-slot-placeholder .disc-slot-icon { font-size: 15px; opacity: 0.35; }
+  #disc-active-bar.drop-target-discard .disc-slot-placeholder {
+    border-color: #f87171;
+    background: rgba(248, 113, 113, 0.14);
+    color: #fca5a5;
+  }
+
+  /* ---------- 2. BUANGAN TERKUBUR (>7): isi tinggi baris ---------- */
+  #disc-buried-cards { padding: 3px 2px; gap: 5px; }
+  #disc-buried-cards .card,
+  #disc-buried-cards .card.buried-grey {
+    height: 100cqh !important;
+    width: auto !important;
+    min-width: 0 !important;
+    aspect-ratio: 5 / 7;
+    border-radius: 6px !important;
+    background: linear-gradient(168deg, #f8fafc 0%, #cbd5e1 100%) !important;
+    color: #334155 !important;
+    opacity: 0.72 !important;
+    filter: grayscale(0.85);
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.45) !important;
+    transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
+  }
+  #disc-buried-cards .card:hover,
+  #disc-buried-cards .card.buried-grey:hover {
+    opacity: 0.98 !important;
+    filter: grayscale(0.1);
+    transform: translateY(-3px) scale(1.05);
+    border-color: #fbbf24 !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6) !important;
+    z-index: 20;
+  }
+
+  /* ---------- 3. PAK KARTU & BUKAAN WILD: kartu isi tinggi kotak ---------- */
+  #pak-box, #wild-box { padding: 6px 12px; gap: 12px; justify-content: center; }
+  .card-back {
+    background: radial-gradient(circle at 50% 35%, #b91c1c 0%, #7f1d1d 60%, #450a0a 100%) !important;
+    border: 1.5px solid #fbbf24 !important;
+    box-shadow: 2px 2px 0 #7f1d1d, 0 4px 10px rgba(0,0,0,0.5) !important;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-back::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px dashed rgba(253, 224, 71, 0.45);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  #pak-box .pak-mini-deck {
+    height: 100cqh !important;
+    width: auto !important;
+    aspect-ratio: 5 / 7;
+    border-radius: 8px !important;
+    font-size: 0;
+    box-shadow: 3px 3px 0 #7f1d1d, 6px 6px 0 #450a0a, 0 6px 14px rgba(0,0,0,0.6) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  #pak-box .pak-mini-deck::after { content: none; }
+  #pak-box .card-back-suit { font-size: 32cqh; color: #fde047; opacity: 0.95; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
+  #pak-box .pak-label, #wild-box .wild-label { font-size: clamp(10px, 13cqh, 15px); letter-spacing: 0.08em; }
+  #pak-box .pak-count { font-size: clamp(13px, 24cqh, 30px); line-height: 1; font-variant-numeric: tabular-nums; }
+  #pak-box .pak-hint, #wild-box .wild-sub { font-size: clamp(8px, 9cqh, 11px); }
+  #wild-box .wild-card-holder .card {
+    height: 100cqh !important;
+    width: auto !important;
+    border-radius: 8px !important;
+  }
+
+  /* ---------- 4. LAWAN: jumlah kartu + kartu jadi isi tinggi kotak ---------- */
+  .opp-split-body {
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .opp-count-box, .opp-melds-box { height: auto; padding: 4px 6px; }
+  .opp-count-box .opp-hand-count-visual { height: 100%; gap: 8px; }
+  .opp-count-box .opp-card-back-icon {
+    height: 100cqh !important;
+    width: auto !important;
+    aspect-ratio: 5 / 7;
+    border-radius: 6px !important;
+    font-size: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .opp-count-box .opp-card-back-icon::after { content: none; }
+  .opp-count-box .opp-card-back-icon span {
+    font-size: 34cqh;
+    color: #fde047;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .opp-count-box .opp-count-num { font-size: clamp(14px, 42cqh, 34px); line-height: 0.95; font-variant-numeric: tabular-nums; }
+  .opp-count-box .opp-count-txt { font-size: clamp(7px, 12cqh, 10px); }
+  .opp-count-box > div[style] { height: 100%; align-items: center; }
+  .opp-count-box .card.small { height: 100cqh !important; width: auto !important; }
+  .opp-melds-box { justify-content: flex-start; align-items: center; gap: 6px; flex-wrap: nowrap; }
+  .opp-melds-box .meld-group,
+  #my-melds .meld-group {
+    height: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 2px 4px;
+    box-sizing: border-box;
+  }
+  .opp-melds-box .card.small,
+  #my-melds .card.small {
+    height: 100cqh !important;
+    width: auto !important;
+    border-radius: 6px !important;
+  }
+  .opp-melds-box .meld-group .card.small,
+  #my-melds .meld-group .card.small {
+    height: calc(100cqh - 7px) !important;
+  }
+  .opp-melds-box .meld-empty-hint { margin: 0 auto; }
+
+  /* ---------- 5. KONSOL PEMAIN: kartu jadi + kartu tangan DI TENGAH ---------- */
+  .player-stadium-console { flex: 0 0 clamp(165px, 36vh, 330px); gap: 3px; padding: 4px 14px; }
+  /* Rebalance arena kiri: proporsi fleksibel, tanpa min-height kaku */
+  #disc-active-bar { flex: 1.35 1 0; min-height: 0; }
+  #disc-buried-bar { flex: 0.75 1 0; min-height: 0; }
+  #deck-wild-row  { flex: 1.1 1 0; min-height: 0; }
+  #arena-col, #opponents-col { gap: 6px; }
+  .opp-split-pod { padding: 4px 8px; gap: 2px; }
+  .opp-split-hdr .player-title { font-size: 11px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opp-split-hdr .opp-melds-label { font-size: 9.5px; white-space: nowrap; }
+  .opp-melds-box .meld-empty-hint, #my-melds .meld-empty-hint { font-size: 10px; white-space: nowrap; }
+  .player-melds-center-box {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    height: auto;
+    flex: 0 0 clamp(42px, 9vh, 74px);
+    width: min(720px, 72%);
+    padding: 4px 10px;
+  }
+  .player-melds-hdr {
+    display: flex;
+    align-items: center;
+    max-width: 70px;
+    line-height: 1.15;
+    white-space: normal;
+    flex-shrink: 0;
+  }
+  #my-melds {
+    flex: 1 1 auto;
+    height: auto;
+    min-width: 0;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 0;
+    flex-wrap: nowrap;
+  }
+  #my-melds > :first-child { margin-left: auto; }
+  #my-melds > :last-child { margin-right: auto; }
+
+  .player-hand-wide-box { justify-content: stretch; padding: 0 10px 4px 10px; }
+  #my-hand {
+    flex: 1 1 0;
+    height: auto !important;
+    min-height: 0;
+    justify-content: flex-start !important;  /* centering via auto margins: aman saat overflow */
+    align-items: flex-end;
+    padding: 20px 6px 2px 6px !important;    /* ruang angkat hover/seleksi */
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  #my-hand .hand-card-slot {
+    height: min(100cqh, 220px) !important;
+    width: auto !important;
+    aspect-ratio: 5 / 7;
+    margin-left: calc(min(100cqh, 220px) * -0.30) !important;
+  }
+  #my-hand .hand-card-slot:first-child { margin-left: auto !important; }
+  #my-hand .hand-card-slot:last-child { margin-right: auto; }
+  #my-hand .hand-card-slot .card { border-radius: 9px; }
+  #my-hand .hand-card-slot:hover .card { transform: translateY(-14px); }
+  #my-hand .hand-card-slot.selected-slot .card,
+  #my-hand .hand-card-slot .card.selected { transform: translateY(-19px) !important; }
+  #my-hand .slot-slide-ctrls { top: -21px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #disc-active-cards .card.active-discard { animation: none; }
+  }
+
 </style>
 </head>
 <body>
