@@ -118,12 +118,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     --gold: #facc15;
     --gold-glow: rgba(250, 204, 21, 0.45);
     /* Large, High-Legibility Card Dimensions */
-    --hand-card-w: clamp(86px, 7.5vw, 112px);
-    --hand-card-h: clamp(126px, 11vw, 164px);
-    --disc-card-w: clamp(66px, 5.5vw, 84px);
-    --disc-card-h: clamp(96px, 8vw, 122px);
-    --meld-card-w: clamp(44px, 3.8vw, 56px);
-    --meld-card-h: clamp(64px, 5.5vw, 82px);
+    --hand-card-w: clamp(56px, 4.8vw, 76px);
+    --hand-card-h: clamp(82px, 7.2vw, 110px);
+    --disc-card-w: clamp(54px, 4.5vw, 72px);
+    --disc-card-h: clamp(80px, 6.8vw, 106px);
+    --meld-card-w: clamp(34px, 2.8vw, 44px);
+    --meld-card-h: clamp(50px, 4.2vw, 64px);
   }
 
   * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
@@ -275,25 +275,36 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
 
   /* ======================================================== */
-  /* 2 ATAS 2 BAWAH ARCHITECTURE (FULL-WIDTH DISCARD RAIL)   */
+  /* ROYALE SPLIT LAYOUT: 4 PLAYERS LEFT vs ARENA RIGHT     */
   /* ======================================================== */
 
-  /* TOP ROW: 3 OPPONENTS ACROSS THE TABLE (CASINO ROYALE STADIUM) */
-  #opponents-top-row {
+  .table-body-split {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: minmax(460px, 1.45fr) minmax(340px, 1fr);
+    gap: 12px;
     width: 100%;
-    flex: 0 0 clamp(74px, 12.5vh, 92px);
+    flex: 1 1 auto;
+    min-height: 0;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
-  .opp-pod {
+  /* LEFT COLUMN: 4 PLAYERS STACKED VERTICALLY */
+  #players-col {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .player-strip {
     background: linear-gradient(135deg, rgba(3, 24, 14, 0.88) 0%, rgba(2, 16, 9, 0.94) 100%);
     backdrop-filter: blur(14px);
     border: 1.5px solid rgba(250, 204, 21, 0.22);
-    border-radius: 14px;
-    padding: 6px 12px;
+    border-radius: 12px;
+    padding: 5px 10px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -302,39 +313,62 @@ HTML_PAGE = r"""<!DOCTYPE html>
     position: relative;
     overflow: visible;
     transition: all 0.22s ease;
+    min-height: 0;
   }
-  .opp-pod-hdr {
+  .opp-strip {
+    flex: 1 1 0;
+  }
+  .my-strip {
+    flex: 1.45 1 0;
+    border-color: rgba(250, 204, 21, 0.45);
+    background: linear-gradient(135deg, rgba(4, 28, 17, 0.92) 0%, rgba(2, 18, 11, 0.96) 100%);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  #zone-bottom.my-turn-active,
+  .my-strip.my-turn-active {
+    border-color: #facc15 !important;
+    background: radial-gradient(ellipse at 50% 10%, rgba(21, 128, 61, 0.35) 0%, rgba(4, 26, 16, 0.96) 100%) !important;
+    box-shadow: 0 0 24px rgba(250, 204, 21, 0.65), 0 4px 20px rgba(0,0,0,0.6), inset 0 0 14px rgba(250, 204, 21, 0.25) !important;
+    animation: my-turn-pulse 1.6s infinite alternate ease-in-out;
+  }
+  @keyframes my-turn-pulse {
+    0% { border-color: #eab308; box-shadow: 0 0 18px rgba(250, 204, 21, 0.45), inset 0 0 10px rgba(250, 204, 21, 0.15); }
+    100% { border-color: #fef08a; box-shadow: 0 0 34px rgba(250, 204, 21, 0.85), inset 0 0 22px rgba(250, 204, 21, 0.35); }
+  }
+
+  .strip-hdr {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
     padding-bottom: 2px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
   }
-  .opp-melds-label {
+  .strip-melds-label {
     font-size: 9.5px;
     color: #fde047;
     font-weight: 700;
   }
-  .opp-pod-content {
+  .strip-body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
-    flex: 1;
-    min-height: 40px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: visible;
   }
-  .opp-pod .cards-row {
+  .strip-hand {
     display: flex;
     align-items: center;
-    gap: 0;
     flex-shrink: 0;
   }
-  .opp-pod .meld-container {
+  .strip-melds {
     flex: 1;
     min-width: 0;
-    max-height: 48px;
+    height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     display: flex;
@@ -345,50 +379,36 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border: none;
     padding: 0;
   }
-
-  /* CENTER ARENA: FULL-WIDTH ROYALE FELT (100% WIDE DISCARD RAIL) */
-  #zone-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 2px 0;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: clamp(140px, 25vh, 195px);
-    max-height: 215px;
-    box-sizing: border-box;
+  .my-strip-body .strip-hand {
+    flex: 1.35;
+    min-width: 0;
+    height: 100%;
+    overflow: visible;
+  }
+  .my-strip-body .strip-melds {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
   }
 
-  /* PLAYER 1 (ANDA - FULL WIDTH HERO CONSOLE ACROSS THE BOTTOM) */
-  #zone-bottom {
+  /* RIGHT COLUMN: ARENA (TOP: DECK & WILD, BOTTOM: DISCARD) */
+  #arena-col {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    gap: 3px;
-    padding: 6px 16px 4px 16px;
-    background: linear-gradient(135deg, rgba(3, 24, 15, 0.9) 0%, rgba(2, 16, 10, 0.96) 100%);
-    backdrop-filter: blur(16px);
-    border: 1.5px solid rgba(250, 204, 21, 0.4);
-    border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
-    position: relative;
-    transition: all 0.25s ease;
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #deck-wild-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
     width: 100%;
-    flex: 0 0 clamp(180px, 30vh, 235px);
-    box-sizing: border-box;
-  }
-  /* PROMINENT PLAYER TURN HIGHLIGHT: BORDER GOLD PULSE */
-  #zone-bottom.my-turn-active {
-    border-color: #facc15 !important;
-    background: radial-gradient(ellipse at 50% 10%, rgba(21, 128, 61, 0.35) 0%, rgba(4, 26, 16, 0.95) 100%) !important;
-    box-shadow: 0 0 28px rgba(250, 204, 21, 0.65), 0 4px 24px rgba(0,0,0,0.6), inset 0 0 16px rgba(250, 204, 21, 0.25) !important;
-    animation: my-turn-pulse 1.6s infinite alternate ease-in-out;
-  }
-  @keyframes my-turn-pulse {
-    0% { border-color: #eab308; box-shadow: 0 0 18px rgba(250, 204, 21, 0.45), inset 0 0 10px rgba(250, 204, 21, 0.15); }
-    100% { border-color: #fef08a; box-shadow: 0 0 34px rgba(250, 204, 21, 0.85), inset 0 0 22px rgba(250, 204, 21, 0.35); }
+    height: clamp(120px, 19vh, 155px);
+    flex-shrink: 0;
   }
 
   /* OPPONENT ACTIVE TURN HIGHLIGHT */
@@ -509,8 +529,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* PAK KARTU (Draw Deck 3D) */
   #pak-box {
-    width: clamp(82px, 6.6vw, 98px);
-    height: clamp(140px, 23vh, 180px);
+    width: 100%;
+    height: 100%;
     background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
     border: 2px solid #fbbf24;
     border-radius: 12px;
@@ -521,13 +541,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
     cursor: pointer;
     text-align: center;
     padding: 6px;
-    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 10px 22px rgba(0,0,0,0.7);
+    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 8px 18px rgba(0,0,0,0.65);
     transition: transform 0.14s ease, box-shadow 0.14s ease;
-    flex-shrink: 0;
+    user-select: none;
+    box-sizing: border-box;
   }
   #pak-box:hover {
-    transform: translateY(-5px) scale(1.03);
-    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 16px 28px rgba(0,0,0,0.8), 0 0 18px rgba(251, 191, 36, 0.45);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 14px 26px rgba(0,0,0,0.8), 0 0 16px rgba(251, 191, 36, 0.45);
   }
   #pak-box.glow {
     border-color: #facc15;
@@ -540,6 +561,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* BUKAAN WILD */
   #wild-box {
+    width: 100%;
+    height: 100%;
     background: radial-gradient(ellipse at center, rgba(88, 28, 135, 0.75) 0%, rgba(38, 10, 60, 0.9) 100%);
     border: 1.5px solid #c084fc;
     border-radius: 12px;
@@ -548,158 +571,131 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: clamp(82px, 6.6vw, 98px);
-    height: clamp(140px, 23vh, 180px);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(192, 132, 252, 0.3);
-    flex-shrink: 0;
+    user-select: none;
+    box-sizing: border-box;
   }
   #wild-card-slot .card {
-    width: clamp(74px, 5.8vw, 84px);
-    height: clamp(110px, 8.6vw, 124px);
+    width: clamp(56px, 4.6vw, 70px);
+    height: clamp(82px, 6.9vw, 104px);
     cursor: default;
   }
   #wild-card-slot .card:hover { transform: none; }
-  #wild-card-slot .card .c-rank { font-size: 22px !important; }
-  #wild-card-slot .card .c-suit-mini { font-size: 19px !important; }
-  #wild-card-slot .card .c-center { font-size: 56px !important; }
+  #wild-card-slot .card .c-rank { font-size: 18px !important; }
+  #wild-card-slot .card .c-suit-mini { font-size: 15px !important; }
+  #wild-card-slot .card .c-center { font-size: 42px !important; }
 
   /* ======================================================== */
-  /* STATIC DISCARD RAIL & BURIED TRAY (7 STATIC SLOTS)      */
+  /* DISCARD RAIL (OLDER CARDS GREYED OUT, TOP 7 GLOWING)     */
   /* ======================================================== */
   #discard-rail {
     background: linear-gradient(135deg, rgba(3, 24, 14, 0.94) 0%, rgba(2, 16, 9, 0.98) 100%);
     backdrop-filter: blur(14px);
     border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 6px 12px 6px 12px;
-    flex: 1;
-    min-width: 0;
-    max-width: none;
-    height: clamp(140px, 23vh, 180px);
+    padding: 8px 12px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
     justify-content: space-between;
     box-shadow: inset 0 2px 12px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.3);
-    transition: all 0.2s ease;
+    box-sizing: border-box;
+    overflow: hidden;
     position: relative;
+    transition: all 0.2s ease;
   }
   .disc-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     flex-shrink: 0;
   }
   .disc-title {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 800;
     color: #fde047;
     letter-spacing: 0.3px;
   }
   .disc-count-pill {
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 800;
     color: #94a3b8;
     background: rgba(255, 255, 255, 0.08);
-    padding: 1px 7px;
+    padding: 2px 8px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  /* TRAY KARTU KECIL DI ATAS PLACE HOLDER KARTU BUANGAN */
-  .disc-buried-tray {
+  /* HORIZONTAL DISCARD TRAIL: BOTH GREYED OUT & GLOWING ACTIVE 7 */
+  #disc-cards {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
+    gap: 8px;
     width: 100%;
-    height: 28px;
-    min-height: 28px;
-    max-height: 28px;
-    margin-bottom: 3px;
-    padding: 2px 8px;
-    background: rgba(0, 0, 0, 0.42);
-    border-radius: 8px;
-    border: 1px solid rgba(250, 204, 21, 0.2);
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 8px 4px;
     overflow-x: auto;
     overflow-y: hidden;
-    gap: 5px;
-    flex-shrink: 0;
     scrollbar-width: thin;
-    scrollbar-color: rgba(250, 204, 21, 0.4) transparent;
+    scrollbar-color: rgba(250, 204, 21, 0.45) transparent;
   }
-  .buried-tray-label {
-    font-size: 9px;
-    font-weight: 800;
-    color: #facc15;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    flex-shrink: 0;
-    margin-right: 2px;
-  }
-  .buried-empty-hint {
-    font-size: 9.5px;
-    color: rgba(203, 213, 225, 0.45);
-    font-style: italic;
-    white-space: nowrap;
-  }
-  .disc-buried-tray .card.buried-mini {
-    width: 25px !important;
-    min-width: 25px !important;
-    height: 32px !important;
-    border-radius: 4px !important;
-    opacity: 0.85;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    cursor: pointer;
+  #disc-cards .card {
+    width: clamp(56px, 4.6vw, 74px);
+    height: clamp(84px, 6.9vw, 110px);
     flex-shrink: 0;
     position: relative;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-  }
-  .disc-buried-tray .card.buried-mini:hover {
-    opacity: 1;
-    transform: translateY(-3px) scale(1.22) !important;
-    z-index: 50;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.8), 0 0 10px rgba(250, 204, 21, 0.6);
-  }
-  .disc-buried-tray .card.buried-mini .c-mini-top {
-    font-size: 8.5px !important;
-    top: 1px !important;
-    left: 2px !important;
-    right: 2px !important;
-  }
-  .disc-buried-tray .card.buried-mini .c-mini-center {
-    font-size: 14px !important;
-  }
-  .disc-buried-tray .card.buried-mini .c-mini-bot {
-    display: none;
+    border-radius: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
   }
 
-  /* STATIC PLACE HOLDER KARTU BUANGAN (7 FIXED SLOTS GRID - PERFECT PORTRAIT RATIO) */
-  #disc-cards {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-    align-items: center;
-    justify-items: center;
-    width: 100%;
-    flex: 1;
-    padding: 2px 0;
-    position: relative;
-    overflow: hidden;
+  /* GREYED OUT BURIED CARDS (> 7 CARDS OLD) */
+  #disc-cards .card.buried-grey {
+    filter: grayscale(1) opacity(0.42);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    cursor: default;
   }
+  #disc-cards .card.buried-grey:hover {
+    filter: grayscale(0.4) opacity(0.85);
+    transform: translateY(-3px);
+    border-color: rgba(250, 204, 21, 0.45) !important;
+    z-index: 5;
+  }
+
+  /* ACTIVE TOP 7 CARDS (GLOWING / MENYALA) */
+  #disc-cards .card.active-discard {
+    border: 2px solid #facc15 !important;
+    box-shadow: 0 0 14px rgba(250, 204, 21, 0.45), 0 4px 12px rgba(0,0,0,0.5);
+    animation: active-disc-glow 2s infinite alternate ease-in-out;
+    cursor: grab;
+  }
+  #disc-cards .card.active-discard:active {
+    cursor: grabbing;
+  }
+  #disc-cards .card.active-discard:hover {
+    transform: translateY(-8px) scale(1.05);
+    z-index: 25;
+    box-shadow: 0 12px 26px rgba(0,0,0,0.85), 0 0 22px rgba(250, 204, 21, 0.85);
+  }
+  @keyframes active-disc-glow {
+    0% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.35), 0 4px 10px rgba(0,0,0,0.5); }
+    100% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.8), 0 6px 16px rgba(0,0,0,0.6); }
+  }
+
+  /* PLACEHOLDER SLOTS WHEN FEWER THAN 7 DISCARD CARDS */
   .disc-slot-placeholder {
-    width: var(--disc-card-w);
-    height: var(--disc-card-h);
-    max-width: 86px;
-    max-height: 124px;
+    width: clamp(56px, 4.6vw, 74px);
+    height: clamp(84px, 6.9vw, 110px);
+    flex-shrink: 0;
     border: 1.5px dashed rgba(250, 204, 21, 0.3);
-    border-radius: 9px;
+    border-radius: 8px;
     background: rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
@@ -709,45 +705,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
     color: rgba(250, 204, 21, 0.45);
     user-select: none;
     pointer-events: none;
-    transition: all 0.15s ease;
-    margin: 0 auto;
+    margin: 0;
   }
   .disc-slot-num {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.5px;
   }
   .disc-slot-icon {
-    font-size: 16px;
+    font-size: 15px;
     opacity: 0.35;
   }
-  .drop-target-discard .disc-slot-placeholder {
-    border-color: #f87171 !important;
-    background: rgba(248, 113, 113, 0.15) !important;
-    color: #fca5a5 !important;
-  }
 
-  /* ACTIVE DISCARD CARDS IN STATIC SLOTS (TRUE PORTRAIT RATIO & CRISP PRESENTATION) */
-  #disc-cards .card {
-    width: var(--disc-card-w);
-    height: var(--disc-card-h);
-    max-width: 86px;
-    max-height: 124px;
-    flex-shrink: 0;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    position: relative;
-    cursor: grab;
-    margin: 0 auto;
-    border-radius: 9px;
-  }
-  #disc-cards .card:active {
-    cursor: grabbing;
-  }
-  #disc-cards .card:hover {
-    transform: translateY(-6px);
-    z-index: 20;
-    box-shadow: 0 10px 22px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.4);
-  }
   /* ENLARGED LOGO & RANK IN DISCARD RAIL */
   #disc-cards .c-rank { font-size: 16px !important; }
   #disc-cards .c-suit-mini { font-size: 13px !important; }
@@ -926,18 +895,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* ======================================================== */
   #my-hand {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: flex-end;
-    padding: 20px 10px 2px 10px;
+    padding: 12px 4px 2px 4px;
     width: 100%;
-    height: clamp(130px, 22vh, 170px);
+    height: 100%;
     position: relative;
     box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: visible;
   }
   #my-hand .hand-card-slot {
     width: var(--hand-card-w);
     height: var(--hand-card-h);
-    margin-left: calc(var(--hand-card-w) * -0.46); /* Kipas lebih lebar & elegan */
+    margin-left: calc(var(--hand-card-w) * -0.42);
     position: relative;
     flex-shrink: 0;
     cursor: grab;
@@ -960,19 +931,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
     width: 100%;
     height: 100%;
     margin-left: 0 !important;
-    box-shadow: -4px 0 12px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: -3px 0 10px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.3);
     transition: transform 0.16s ease, box-shadow 0.16s ease;
-    pointer-events: none; /* Event mouse & drag ditangani 100% oleh slot statis */
+    pointer-events: none;
+    border-radius: 8px;
   }
   #my-hand .hand-card-slot:hover .card {
-    transform: translateY(-24px);
-    box-shadow: -4px 14px 26px rgba(0,0,0,0.65), 0 0 18px rgba(250, 204, 21, 0.45);
+    transform: translateY(-16px);
+    box-shadow: -4px 10px 20px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.45);
   }
   #my-hand .hand-card-slot.selected-slot .card,
   #my-hand .hand-card-slot .card.selected {
-    transform: translateY(-36px) !important;
+    transform: translateY(-22px) !important;
     border-color: #f59e0b !important;
-    box-shadow: 0 0 0 3px #f59e0b, 0 18px 32px rgba(245, 158, 11, 0.6) !important;
+    box-shadow: 0 0 0 2.5px #f59e0b, 0 12px 24px rgba(245, 158, 11, 0.6) !important;
   }
   #my-hand .hand-card-slot.selected-slot {
     z-index: 90 !important;
@@ -1912,21 +1884,35 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
   @media (max-height: 640px) {
     :root {
-      --hand-card-w: clamp(72px, 6.8vw, 86px);
-      --hand-card-h: clamp(104px, 9.8vw, 124px);
-      --disc-card-w: clamp(58px, 5.2vw, 70px);
-      --disc-card-h: clamp(84px, 7.5vw, 102px);
+      --hand-card-w: clamp(48px, 4.2vw, 62px);
+      --hand-card-h: clamp(72px, 6.2vw, 90px);
+      --disc-card-w: clamp(46px, 4.0vw, 60px);
+      --disc-card-h: clamp(68px, 6.0vw, 88px);
+      --meld-card-w: clamp(28px, 2.4vw, 36px);
+      --meld-card-h: clamp(40px, 3.5vw, 52px);
     }
     #table { padding: 3px 8px; gap: 4px; }
-    #opponents-top-row { height: 68px; }
-    #zone-center { min-height: 125px; max-height: 155px; }
-    #pak-box, #wild-box, #discard-rail { height: 135px; }
-    #players-bottom-row { height: 160px; }
-    #my-hand { height: 115px; padding-top: 14px; }
-    .c-rank { font-size: 20px !important; }
-    .c-suit-mini { font-size: 16px !important; }
-    .c-center { font-size: 46px !important; }
+    .table-body-split { gap: 8px; }
+    #deck-wild-row { height: 105px; }
+    .player-strip { padding: 4px 8px; }
+    .c-rank { font-size: 14px !important; }
+    .c-suit-mini { font-size: 12px !important; }
+    .c-center { font-size: 28px !important; }
     .btn-action { height: 28px; padding: 0 8px; font-size: 10px; }
+  }
+  @media (max-width: 900px) {
+    .table-body-split {
+      grid-template-columns: 1fr;
+      overflow-y: auto;
+    }
+    #players-col {
+      height: auto;
+      min-height: 380px;
+    }
+    #arena-col {
+      height: auto;
+      min-height: 280px;
+    }
   }
 
 </style>
@@ -2059,100 +2045,114 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <div id="hdr-status" class="status-notif" style="display:none;"></div>
   </div>
 
-  <!-- TOP OPPONENTS ROW (3 PLAYERS ACROSS THE TABLE) -->
-  <div id="opponents-top-row">
-    <!-- OPPONENT 1: TOP LEFT -->
-    <div id="zone-top-left" class="zone-box opp-pod">
-      <div class="opp-pod-hdr">
-        <div class="player-title" id="top-left-title">Bot Budi</div>
-        <div id="top-left-melds-label" class="opp-melds-label">Kartu Jadi:</div>
-      </div>
-      <div class="opp-pod-content">
-        <div class="cards-row opp-cards" id="top-left-cards"></div>
-        <div class="meld-container opp-melds" id="top-left-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
-      </div>
-    </div>
-
-    <!-- OPPONENT 2: TOP MID -->
-    <div id="zone-top-mid" class="zone-box opp-pod">
-      <div class="opp-pod-hdr">
-        <div class="player-title" id="top-mid-title">Bot Siti</div>
-        <div id="top-mid-melds-label" class="opp-melds-label">Kartu Jadi:</div>
-      </div>
-      <div class="opp-pod-content">
-        <div class="cards-row opp-cards" id="top-mid-cards"></div>
-        <div class="meld-container opp-melds" id="top-mid-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
-      </div>
-    </div>
-
-    <!-- OPPONENT 3: TOP RIGHT -->
-    <div id="zone-top-right" class="zone-box opp-pod">
-      <div class="opp-pod-hdr">
-        <div class="player-title" id="top-right-title">Bot Agus</div>
-        <div id="top-right-melds-label" class="opp-melds-label">Kartu Jadi:</div>
-      </div>
-      <div class="opp-pod-content">
-        <div class="cards-row opp-cards" id="top-right-cards"></div>
-        <div class="meld-container opp-melds" id="top-right-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CENTER AREA: THE ROYALE FELT (FULL WIDTH SPAN) -->
-  <div id="zone-center">
-    <!-- PAK KARTU -->
-    <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu (D)">
-      <div class="pak-label">PAK KARTU</div>
-      <div id="pak-count" class="pak-count">(24)</div>
-      <div class="pak-hint">KLIK / TARIK (D)</div>
-    </div>
-
-    <!-- BUKAAN WILD -->
-    <div id="wild-box">
-      <div id="wild-title" class="wild-title">BUKAAN WILD</div>
-      <div id="wild-card-slot"></div>
-    </div>
-
-    <!-- PROMINENT WIDE DISCARD RAIL (7 SLOTS + BURIED TRAY) -->
-    <div id="discard-rail" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
-      <div class="disc-header">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="disc-header-icon">🎴</span>
-          <span id="disc-title" class="disc-title">TUMPUKAN BUANGAN (7 Teratas Aktif):</span>
+  <!-- TABLE BODY SPLIT: 4 PLAYERS LEFT COLUMN vs ARENA RIGHT COLUMN -->
+  <div class="table-body-split">
+    <!-- LEFT COLUMN: 4 PLAYERS STACKED VERTICALLY -->
+    <div id="players-col">
+      <!-- OPPONENT 1 -->
+      <div id="zone-opp-1" class="zone-box player-strip opp-strip">
+        <div class="strip-hdr">
+          <div class="player-title" id="opp-1-title">Bot Budi</div>
+          <div id="opp-1-melds-label" class="strip-melds-label">Kartu Jadi:</div>
         </div>
-        <span id="disc-count-pill" class="disc-count-pill">0 Kartu</span>
+        <div class="strip-body">
+          <div class="strip-hand opp-cards" id="opp-1-cards"></div>
+          <div class="strip-melds meld-container opp-melds" id="opp-1-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi</div>
+          </div>
+        </div>
       </div>
-      <!-- TRAY KARTU KECIL DI ATAS PLACE HOLDER KARTU BUANGAN -->
-      <div id="disc-buried-tray" class="disc-buried-tray">
-        <span class="buried-empty-hint">Riwayat Kartu Lama: (Belum ada kartu terkubur)</span>
-      </div>
-      <!-- STATIC PLACE HOLDER KARTU BUANGAN (7 SLOT TETAP) -->
-      <div id="disc-cards"></div>
-    </div>
-  </div>
 
-  <!-- PLAYER 1 (ANDA): FULL-WIDTH HERO CONSOLE ACROSS THE BOTTOM -->
-  <div id="zone-bottom" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 8px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:11px;padding:3px 10px;">★ GILIRAN ANDA! ★</span>
-        <span id="my-info" class="player-title" style="font-size:13px;color:#facc15;">Anda (Player 1)</span>
+      <!-- OPPONENT 2 -->
+      <div id="zone-opp-2" class="zone-box player-strip opp-strip">
+        <div class="strip-hdr">
+          <div class="player-title" id="opp-2-title">Bot Siti</div>
+          <div id="opp-2-melds-label" class="strip-melds-label">Kartu Jadi:</div>
+        </div>
+        <div class="strip-body">
+          <div class="strip-hand opp-cards" id="opp-2-cards"></div>
+          <div class="strip-melds meld-container opp-melds" id="opp-2-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi</div>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="my-step-badge" style="display:none;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;"></span>
-        <span id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
-          BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
-        </span>
+
+      <!-- OPPONENT 3 -->
+      <div id="zone-opp-3" class="zone-box player-strip opp-strip">
+        <div class="strip-hdr">
+          <div class="player-title" id="opp-3-title">Bot Agus</div>
+          <div id="opp-3-melds-label" class="strip-melds-label">Kartu Jadi:</div>
+        </div>
+        <div class="strip-body">
+          <div class="strip-hand opp-cards" id="opp-3-cards"></div>
+          <div class="strip-melds meld-container opp-melds" id="opp-3-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLAYER 4 (ANDA - HERO CONSOLE) -->
+      <div id="zone-bottom" class="zone-box player-strip my-strip" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
+        <div class="strip-hdr">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:10.5px;padding:2px 8px;">★ GILIRAN ANDA! ★</span>
+            <span id="my-info" class="player-title" style="font-size:12.5px;color:#facc15;">Anda (Player 1)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="my-step-badge" style="display:none;font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;"></span>
+            <span id="my-seri-badge" style="font-size:9.5px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.35);padding:2px 7px;border-radius:999px;">
+              BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
+            </span>
+          </div>
+        </div>
+        <div class="strip-body my-strip-body">
+          <!-- Hand cards on the left -->
+          <div class="strip-hand my-hand-wrapper">
+            <div id="my-hand"></div>
+          </div>
+          <!-- Melds on the right -->
+          <div class="strip-melds meld-container my-melds-wrapper" id="my-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- PLAYER MELDS -->
-    <div id="my-melds" class="meld-container" style="width:100%;">
-      <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
-    </div>
+    <!-- RIGHT COLUMN: ARENA (TOP: DECK & WILD, BOTTOM: DISCARD) -->
+    <div id="arena-col">
+      <!-- TOP ROW: PAK KARTU & BUKAAN WILD SIDE-BY-SIDE -->
+      <div id="deck-wild-row">
+        <!-- PAK KARTU -->
+        <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu (D)">
+          <div class="pak-label">PAK KARTU</div>
+          <div id="pak-count" class="pak-count">(24)</div>
+          <div class="pak-hint">KLIK / TARIK (D)</div>
+        </div>
 
-    <!-- PLAYER HAND (50% OVERLAPPING FAN) -->
-    <div id="my-hand"></div>
+        <!-- BUKAAN WILD -->
+        <div id="wild-box">
+          <div id="wild-title" class="wild-title">BUKAAN WILD</div>
+          <div id="wild-card-slot"></div>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW: TUMPUKAN BUANGAN (DISCARD ARENA) -->
+      <div id="discard-rail" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
+        <div class="disc-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="disc-header-icon">🎴</span>
+            <span id="disc-title" class="disc-title">TUMPUKAN BUANGAN:</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="disc-count-pill" class="disc-count-pill">0 Kartu</span>
+            <span class="disc-active-hint" style="font-size:9.5px;color:#facc15;font-weight:700;">(7 Teratas Aktif)</span>
+          </div>
+        </div>
+        <!-- Card rail container for both greyed-out older cards and glowing active 7 cards -->
+        <div id="disc-cards"></div>
+        <div id="disc-buried-tray" style="display:none;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ACTION DOCK (ALWAYS 100% VISIBLE & ACCESSIBLE!) -->
@@ -2471,7 +2471,7 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
   const meldsEl = document.getElementById(`${prefix}-melds`);
 
   if (!zoneEl || !p) return;
-  const basePodClass = 'zone-box opp-pod';
+  const basePodClass = 'zone-box player-strip opp-strip';
   zoneEl.className = basePodClass + (isTurn ? ' zone-active opponent-turn-active' : '');
 
   const badgeHTML = isTurn ? `<span class="turn-badge" style="background:#38bdf8;color:#082f49;box-shadow:0 0 10px #38bdf8;">⏳ SEDANG JALAN...</span> ` : '';
@@ -2768,17 +2768,14 @@ function updateUI(st) {
     }
   }
 
-  // Render Discard Rail (Static 7-slot Placeholder + Mini Buried Cards Tray di atasnya)
+  // Render Discard Rail (All discards in rail, older cards greyed out, top 7 glowing active)
   const discContainer = document.getElementById('disc-cards');
-  const buriedTray = document.getElementById('disc-buried-tray');
   const discTitleEl = document.getElementById('disc-title');
   const discCountPill = document.getElementById('disc-count-pill');
   if (discContainer) {
     const totalDisc = discards.length;
-    const MAX_DISC = 7;
-    const startIdx = Math.max(0, totalDisc - MAX_DISC);
-    const buriedDiscards = discards.slice(0, startIdx);
-    const top7Discards = discards.slice(startIdx);
+    const MAX_ACTIVE = 7;
+    const startIdx = Math.max(0, totalDisc - MAX_ACTIVE);
     const buriedCount = startIdx;
 
     if (discTitleEl) {
@@ -2788,96 +2785,93 @@ function updateUI(st) {
       discCountPill.textContent = `${totalDisc} Kartu${buriedCount > 0 ? ` (${buriedCount} Terkubur)` : ''}`;
     }
 
-    // 1. Render Kartu Kecil di Atas Place Holder (#disc-buried-tray)
-    if (buriedTray) {
-      if (buriedCount === 0) {
-        buriedTray.innerHTML = '<span class="buried-empty-hint">Riwayat Kartu Lama: (Belum ada kartu terkubur)</span>';
-      } else {
-        const miniCardsHtml = buriedDiscards.map((c, bi) => {
-          return renderCardHTML(c, {
-            small: true,
-            locked: true,
-            hint: `Kartu buangan lama #${bi + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif`
-          }).replace('class="card', 'class="card buried-mini');
-        }).join('');
-        buriedTray.innerHTML = `<span class="buried-tray-label">🗄️ LAMA (${buriedCount}):</span>` + miniCardsHtml;
-        buriedTray.scrollLeft = buriedTray.scrollWidth;
-      }
-    }
-
-    // 2. Render Static 7-Card Placeholder Slots (#disc-cards)
     const discSig = discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
     if (discSig !== lastDiscSig) {
       lastDiscSig = discSig;
-      const count = top7Discards.length;
 
-      let slotsHtml = '';
-      for (let slot = 0; slot < MAX_DISC; slot++) {
-        if (slot < count) {
-          const c = top7Discards[slot];
-          const actualIndex = startIdx + slot;
-          const revIdx = count - 1 - slot; // 0 is newest (rightmost, AMBIL #1)
-          const sliceToRight = top7Discards.slice(slot);
+      let railHtml = '';
+
+      // 1. Render all discarded cards in order (from oldest to newest)
+      for (let i = 0; i < totalDisc; i++) {
+        const c = discards[i];
+        const isActive = (i >= startIdx); // True if within top 7
+
+        if (isActive) {
+          // Top 7 active card (GLOWING / MENYALA)
+          const revIdx = (totalDisc - 1) - i; // 0 for newest (rightmost)
+          const sliceToRight = discards.slice(i);
           const blockedByWild = sliceToRight.some(x => x.is_wild || x.rank === 'JOKER');
           const isWildSelf = Boolean(c.is_wild || c.rank === 'JOKER');
           const badgeText = isWildSelf ? 'WILD MATI' : (blockedByWild ? 'TERKUNCI' : `AMBIL #${revIdx + 1}`);
           const canClick = isMyTurn && (st.phase === 'TURN_DRAW') && !blockedByWild;
 
-          slotsHtml += renderCardHTML(c, {
+          railHtml += renderCardHTML(c, {
             badge: badgeText,
             locked: blockedByWild,
-            onclick: (isMyTurn && st.phase === 'TURN_DRAW') ? `takeDiscard(${actualIndex})` : '',
+            onclick: canClick ? `takeDiscard(${i})` : '',
             draggable: canClick,
-            ondragstart: canClick ? `onDiscardDragStart(event, ${actualIndex})` : '',
+            ondragstart: canClick ? `onDiscardDragStart(event, ${i})` : '',
             ondragend: `onDragEndClean(event)`,
             hint: blockedByWild
               ? `Tidak bisa diambil karena terhalang / merupakan Wild Card buangan`
               : `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
-          });
+          }).replace('class="card', 'class="card active-discard');
         } else {
-          // Static Empty Slot Placeholder
-          const slotNum = slot + 1;
-          slotsHtml += `<div class="disc-slot-placeholder" title="Slot Kartu Buangan #${slotNum} (Kosong)">
+          // Older card beyond 7 (GREYED OUT)
+          railHtml += renderCardHTML(c, {
+            locked: true,
+            hint: `Kartu buangan lama #${i + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif (Tidak dapat diambil)`
+          }).replace('class="card', 'class="card buried-grey');
+        }
+      }
+
+      // 2. If fewer than 7 cards total, render dashed slot placeholders up to 7
+      if (totalDisc < MAX_ACTIVE) {
+        for (let s = totalDisc; s < MAX_ACTIVE; s++) {
+          const slotNum = s + 1;
+          railHtml += `<div class="disc-slot-placeholder" title="Slot Kartu Buangan #${slotNum} (Kosong)">
             <span class="disc-slot-num">SLOT #${slotNum}</span>
             <span class="disc-slot-icon">🂠</span>
           </div>`;
         }
       }
-      discContainer.innerHTML = slotsHtml;
+
+      discContainer.innerHTML = railHtml;
+
+      // Smooth auto-scroll to the right so active cards are always prominently visible
+      requestAnimationFrame(() => {
+        discContainer.scrollLeft = discContainer.scrollWidth;
+      });
     }
   }
 
-  // Render Opponents (3 ATAS, 1 BAWAH ARCHITECTURE)
+  // Render Opponents (4 PLAYERS VERTICAL STACK ON LEFT COLUMN)
   const n = st.players.length;
   const isSpec = Boolean(mySeat === null || st.is_spectator || spectatorMode);
   const showOpponentFace = Boolean(isSpec || st.show_bot_hands);
-  const zTopLeft = document.getElementById('zone-top-left');
-  const zTopMid = document.getElementById('zone-top-mid');
-  const zTopRight = document.getElementById('zone-top-right');
-  const oppTopRow = document.getElementById('opponents-top-row');
+  const zOpp1 = document.getElementById('zone-opp-1');
+  const zOpp2 = document.getElementById('zone-opp-2');
+  const zOpp3 = document.getElementById('zone-opp-3');
 
   if (n === 2) {
-    if (oppTopRow) oppTopRow.style.gridTemplateColumns = '1fr';
-    if (zTopLeft) zTopLeft.style.display = 'none';
-    if (zTopMid) zTopMid.style.display = 'flex';
-    if (zTopRight) zTopRight.style.display = 'none';
-    renderOpponentZone('top-mid', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    if (zOpp1) zOpp1.style.display = 'flex';
+    if (zOpp2) zOpp2.style.display = 'none';
+    if (zOpp3) zOpp3.style.display = 'none';
+    renderOpponentZone('opp-1', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
   } else if (n === 3) {
-    if (oppTopRow) oppTopRow.style.gridTemplateColumns = '1fr 1fr';
-    if (zTopLeft) zTopLeft.style.display = 'flex';
-    if (zTopMid) zTopMid.style.display = 'none';
-    if (zTopRight) zTopRight.style.display = 'flex';
-    renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('top-right', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
+    if (zOpp1) zOpp1.style.display = 'flex';
+    if (zOpp2) zOpp2.style.display = 'flex';
+    if (zOpp3) zOpp3.style.display = 'none';
+    renderOpponentZone('opp-1', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('opp-2', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
   } else {
-    // 4 Players: 3 Opponents side-by-side across the top!
-    if (oppTopRow) oppTopRow.style.gridTemplateColumns = 'repeat(3, 1fr)';
-    if (zTopLeft) zTopLeft.style.display = 'flex';
-    if (zTopMid) zTopMid.style.display = 'flex';
-    if (zTopRight) zTopRight.style.display = 'flex';
-    renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('top-mid', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('top-right', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
+    // 4 Players: 3 Opponents stacked vertically above player!
+    if (zOpp1) zOpp1.style.display = 'flex';
+    if (zOpp2) zOpp2.style.display = 'flex';
+    if (zOpp3) zOpp3.style.display = 'flex';
+    renderOpponentZone('opp-1', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('opp-2', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('opp-3', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
   }
 
   // Render Player Zone
@@ -3216,14 +3210,14 @@ function getZoneElementForSeat(seat) {
   }
   const n = (latestState && latestState.players) ? latestState.players.length : 4;
   if (n === 2) {
-    if (seat === (active + 1) % n) return document.getElementById('zone-top-mid');
+    if (seat === (active + 1) % n) return document.getElementById('zone-opp-1');
   } else if (n === 3) {
-    if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
-    if (seat === (active + 2) % n) return document.getElementById('zone-top-right');
+    if (seat === (active + 1) % n) return document.getElementById('zone-opp-1');
+    if (seat === (active + 2) % n) return document.getElementById('zone-opp-2');
   } else {
-    if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
-    if (seat === (active + 2) % n) return document.getElementById('zone-top-mid');
-    if (seat === (active + 3) % n) return document.getElementById('zone-top-right');
+    if (seat === (active + 1) % n) return document.getElementById('zone-opp-1');
+    if (seat === (active + 2) % n) return document.getElementById('zone-opp-2');
+    if (seat === (active + 3) % n) return document.getElementById('zone-opp-3');
   }
   return document.getElementById('zone-bottom');
 }
@@ -3530,10 +3524,10 @@ function enableDragScroll(el) {
   });
 }
 window.addEventListener('DOMContentLoaded', () => {
-  enableDragScroll(document.getElementById('disc-buried-tray'));
+  enableDragScroll(document.getElementById('disc-cards'));
   enableDragScroll(document.getElementById('my-hand'));
 });
-enableDragScroll(document.getElementById('disc-buried-tray'));
+enableDragScroll(document.getElementById('disc-cards'));
 enableDragScroll(document.getElementById('my-hand'));
 
 function onHandDragOver(e) {
