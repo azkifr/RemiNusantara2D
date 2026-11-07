@@ -118,10 +118,10 @@ HTML_PAGE = r"""<!DOCTYPE html>
     --gold: #facc15;
     --gold-glow: rgba(250, 204, 21, 0.45);
     /* Large, High-Legibility Card Dimensions */
-    --hand-card-w: clamp(56px, 4.8vw, 76px);
-    --hand-card-h: clamp(82px, 7.2vw, 110px);
-    --disc-card-w: clamp(54px, 4.5vw, 72px);
-    --disc-card-h: clamp(80px, 6.8vw, 106px);
+    --hand-card-w: clamp(62px, 5.2vw, 82px);
+    --hand-card-h: clamp(90px, 7.5vw, 118px);
+    --disc-card-w: clamp(48px, 4.2vw, 60px);
+    --disc-card-h: clamp(70px, 6.0vw, 88px);
     --meld-card-w: clamp(34px, 2.8vw, 44px);
     --meld-card-h: clamp(50px, 4.2vw, 64px);
   }
@@ -275,13 +275,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
 
   /* ======================================================== */
-  /* ROYALE SPLIT LAYOUT: 4 PLAYERS LEFT vs ARENA RIGHT     */
+  /* ROYALE ANNOTATED WIREFRAME LAYOUT: LEFT ARENA vs RIGHT OPPONENTS */
   /* ======================================================== */
 
-  .table-body-split {
+  .table-main-split {
     display: grid;
-    grid-template-columns: minmax(460px, 1.45fr) minmax(340px, 1fr);
-    gap: 12px;
+    grid-template-columns: minmax(440px, 1.22fr) minmax(360px, 1fr);
+    gap: 10px;
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
@@ -289,8 +289,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     overflow: hidden;
   }
 
-  /* LEFT COLUMN: 4 PLAYERS STACKED VERTICALLY */
-  #players-col {
+  /* LEFT COLUMN: ARENA (ACTIVE DISCARD, BURIED DISCARD, DECK & WILD) */
+  #arena-col {
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -299,7 +299,265 @@ HTML_PAGE = r"""<!DOCTYPE html>
     overflow: hidden;
   }
 
-  .player-strip {
+  .arena-bar {
+    background: linear-gradient(135deg, rgba(3, 24, 14, 0.94) 0%, rgba(2, 16, 9, 0.98) 100%);
+    backdrop-filter: blur(14px);
+    border: 1.5px solid rgba(250, 204, 21, 0.35);
+    border-radius: 12px;
+    padding: 5px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .arena-bar-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+  .bar-hdr-icon { font-size: 13px; }
+  .bar-hdr-title {
+    font-size: 10px;
+    font-weight: 800;
+    color: #fde047;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .arena-pill {
+    font-size: 9px;
+    font-weight: 800;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  /* ROW 1: 7 KARTU BUANGAN (AKTIF) */
+  #disc-active-bar {
+    flex: 1.25 1 0;
+    min-height: clamp(82px, 14vh, 106px);
+  }
+  .disc-active-grid {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 3px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(250, 204, 21, 0.45) transparent;
+  }
+  .disc-active-grid .card {
+    width: var(--disc-card-w);
+    height: var(--disc-card-h);
+    aspect-ratio: 2.5 / 3.6;
+    border-radius: 7px;
+    flex-shrink: 0;
+    position: relative;
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+  }
+  .disc-active-grid .card.active-discard {
+    border: 2px solid #facc15 !important;
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.5), 0 4px 10px rgba(0,0,0,0.5);
+    animation: active-disc-glow 2s infinite alternate ease-in-out;
+    cursor: grab;
+  }
+  .disc-active-grid .card.active-discard:active { cursor: grabbing; }
+  .disc-active-grid .card.active-discard:hover {
+    transform: translateY(-6px) scale(1.06);
+    z-index: 25;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.85), 0 0 20px rgba(250, 204, 21, 0.85);
+  }
+  @keyframes active-disc-glow {
+    0% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.35); }
+    100% { box-shadow: 0 0 20px rgba(250, 204, 21, 0.8); }
+  }
+  .disc-active-grid .c-badge-pill {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7.5px;
+    padding: 1px 4px;
+    background: #facc15;
+    color: #0f172a;
+    font-weight: 900;
+    border: 1px solid #eab308;
+    border-radius: 999px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ROW 2: KARTU BUANGAN LEBIH DARI 7 (TERKUBUR) */
+  #disc-buried-bar {
+    flex: 0.9 1 0;
+    min-height: clamp(52px, 9vh, 68px);
+  }
+  .disc-buried-scroll {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 2px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(250, 204, 21, 0.3) transparent;
+  }
+  .disc-buried-scroll .card.buried-grey {
+    width: clamp(28px, 2.4vw, 36px) !important;
+    height: clamp(40px, 3.4vw, 50px) !important;
+    aspect-ratio: 2.5 / 3.6;
+    border-radius: 4px !important;
+    filter: grayscale(1) opacity(0.42);
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    flex-shrink: 0;
+    cursor: default;
+    transition: all 0.12s ease;
+  }
+  .disc-buried-scroll .card.buried-grey:hover {
+    filter: grayscale(0.3) opacity(0.85);
+    transform: translateY(-2px);
+    border-color: rgba(250, 204, 21, 0.45) !important;
+    z-index: 10;
+  }
+  .buried-empty-hint {
+    font-size: 9px;
+    color: rgba(203, 213, 225, 0.4);
+    font-style: italic;
+    white-space: nowrap;
+  }
+
+  /* ROW 3: PAK KARTU & BUKAAN WILD (SIDE-BY-SIDE) */
+  #deck-wild-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    flex: 1.1 1 0;
+    min-height: clamp(82px, 14vh, 105px);
+  }
+  #pak-box {
+    background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
+    border: 2px solid #fbbf24;
+    border-radius: 12px;
+    padding: 4px 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 6px 14px rgba(0,0,0,0.65);
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+    user-select: none;
+    box-sizing: border-box;
+  }
+  #pak-box:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 10px 20px rgba(0,0,0,0.75), 0 0 14px rgba(251, 191, 36, 0.4);
+  }
+  .pak-card-back-visual {
+    flex-shrink: 0;
+  }
+  .pak-mini-deck {
+    width: clamp(34px, 3.0vw, 42px) !important;
+    height: clamp(48px, 4.2vw, 60px) !important;
+    border-radius: 5px !important;
+  }
+  .pak-info-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
+  .pak-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #fef08a;
+    letter-spacing: 0.3px;
+  }
+  .pak-count {
+    font-size: 13px;
+    font-weight: 900;
+    color: #facc15;
+  }
+  .pak-hint {
+    font-size: 8px;
+    font-weight: 700;
+    color: #cbd5e1;
+    opacity: 0.85;
+  }
+
+  #wild-box {
+    background: radial-gradient(ellipse at center, rgba(88, 28, 135, 0.75) 0%, rgba(38, 10, 60, 0.9) 100%);
+    border: 1.5px solid #c084fc;
+    border-radius: 12px;
+    padding: 4px 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5), 0 0 12px rgba(192, 132, 252, 0.3);
+    user-select: none;
+    box-sizing: border-box;
+  }
+  .wild-card-holder .card {
+    width: clamp(36px, 3.2vw, 44px) !important;
+    height: clamp(50px, 4.4vw, 62px) !important;
+    border-radius: 5px !important;
+    cursor: default;
+  }
+  .wild-card-holder .card .c-rank { font-size: 12px !important; }
+  .wild-card-holder .card .c-suit-mini { font-size: 10px !important; }
+  .wild-card-holder .card .c-center { font-size: 24px !important; }
+  .wild-info-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
+  .wild-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #e9d5ff;
+    letter-spacing: 0.3px;
+  }
+  .wild-sub {
+    font-size: 8px;
+    font-weight: 700;
+    color: #c084fc;
+  }
+
+  /* RIGHT COLUMN: 3 OPPONENTS STACKED (JUMLAH KARTU LEFT + KARTU JADI RIGHT) */
+  #opponents-col {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .opp-split-pod {
     background: linear-gradient(135deg, rgba(3, 24, 14, 0.88) 0%, rgba(2, 16, 9, 0.94) 100%);
     backdrop-filter: blur(14px);
     border: 1.5px solid rgba(250, 204, 21, 0.22);
@@ -310,33 +568,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
     justify-content: space-between;
     gap: 3px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
-    position: relative;
-    overflow: visible;
-    transition: all 0.22s ease;
-    min-height: 0;
-  }
-  .opp-strip {
     flex: 1 1 0;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
   }
-  .my-strip {
-    flex: 1.6 1 0;
-    border-color: rgba(250, 204, 21, 0.45);
-    background: linear-gradient(135deg, rgba(4, 28, 17, 0.92) 0%, rgba(2, 18, 11, 0.96) 100%);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-  }
-  #zone-bottom.my-turn-active,
-  .my-strip.my-turn-active {
-    border-color: #facc15 !important;
-    background: radial-gradient(ellipse at 50% 10%, rgba(21, 128, 61, 0.35) 0%, rgba(4, 26, 16, 0.96) 100%) !important;
-    box-shadow: 0 0 24px rgba(250, 204, 21, 0.65), 0 4px 20px rgba(0,0,0,0.6), inset 0 0 14px rgba(250, 204, 21, 0.25) !important;
-    animation: my-turn-pulse 1.6s infinite alternate ease-in-out;
-  }
-  @keyframes my-turn-pulse {
-    0% { border-color: #eab308; box-shadow: 0 0 18px rgba(250, 204, 21, 0.45), inset 0 0 10px rgba(250, 204, 21, 0.15); }
-    100% { border-color: #fef08a; box-shadow: 0 0 34px rgba(250, 204, 21, 0.85), inset 0 0 22px rgba(250, 204, 21, 0.35); }
-  }
-
-  .strip-hdr {
+  .opp-split-hdr {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -345,108 +583,164 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
   }
-  .strip-melds-label {
-    font-size: 9.5px;
-    color: #fde047;
-    font-weight: 700;
-  }
-  .strip-body {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+  .opp-split-body {
+    display: grid;
+    grid-template-columns: clamp(75px, 8vw, 95px) 1fr;
+    gap: 8px;
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: visible;
+    align-items: center;
   }
-  .strip-hand {
+  .opp-count-box {
+    background: rgba(0, 0, 0, 0.38);
+    border: 1px solid rgba(250, 204, 21, 0.25);
+    border-radius: 8px;
+    padding: 3px 6px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+  }
+  .opp-hand-count-visual {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .opp-card-back-icon {
+    width: 24px !important;
+    height: 34px !important;
+    border-radius: 4px !important;
+    font-size: 8px !important;
     flex-shrink: 0;
   }
-  .strip-melds {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
+  .opp-count-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.1;
+  }
+  .opp-count-num {
+    font-size: 14px;
+    font-weight: 900;
+    color: #facc15;
+  }
+  .opp-count-txt {
+    font-size: 7.5px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+  }
+  .opp-melds-box {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(250, 204, 21, 0.2);
+    border-radius: 8px;
+    padding: 3px 6px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 4px;
-    background: transparent;
-    border: none;
-    padding: 0;
+    height: 100%;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-sizing: border-box;
   }
 
-  /* PLAYER 4 (ANDA): 3-BOX LAYOUT (MELDS LEFT - HAND CENTER - MELDS RIGHT) */
-  .my-strip-three-col {
-    display: grid;
-    grid-template-columns: minmax(90px, 0.78fr) minmax(260px, 2.1fr) minmax(90px, 0.78fr);
-    gap: 7px;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    align-items: stretch;
-  }
-  .player-flank-box {
-    background: rgba(0, 0, 0, 0.42);
-    border: 1.5px solid rgba(250, 204, 21, 0.28);
-    border-radius: 9px;
-    padding: 3px 6px;
+  /* BOTTOM: PLAYER STADIUM HERO CONSOLE (ROUNDED STADIUM) */
+  .player-stadium-console {
+    background: radial-gradient(ellipse at 50% 10%, rgba(4, 28, 17, 0.95) 0%, rgba(2, 16, 10, 0.98) 100%);
+    backdrop-filter: blur(16px);
+    border: 2px solid rgba(250, 204, 21, 0.45);
+    border-radius: 20px;
+    padding: 6px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 0;
+    gap: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+    flex: 0 0 clamp(180px, 32vh, 230px);
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
     overflow: hidden;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    transition: all 0.25s ease;
   }
-  .player-flank-box:hover {
-    border-color: rgba(250, 204, 21, 0.45);
+  #zone-bottom.my-turn-active {
+    border-color: #facc15 !important;
+    background: radial-gradient(ellipse at 50% 10%, rgba(21, 128, 61, 0.35) 0%, rgba(4, 26, 16, 0.98) 100%) !important;
+    box-shadow: 0 0 28px rgba(250, 204, 21, 0.65), 0 4px 24px rgba(0,0,0,0.6), inset 0 0 16px rgba(250, 204, 21, 0.25) !important;
+    animation: my-turn-pulse 1.6s infinite alternate ease-in-out;
   }
-  .flank-box-hdr {
+  .stadium-hdr {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
     padding-bottom: 2px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 8.5px;
-    font-weight: 800;
-    color: #fde047;
-    letter-spacing: 0.3px;
     flex-shrink: 0;
   }
-  .flank-melds-content {
+
+  /* TOP CENTER BOX: KARTU JADI (MELDS) */
+  .player-melds-center-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1.5px solid rgba(250, 204, 21, 0.3);
+    border-radius: 9px;
+    padding: 2px 8px;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: clamp(340px, 60%, 540px);
+    margin: 0 auto;
+    height: clamp(36px, 6.5vh, 48px);
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+  .player-melds-hdr {
+    font-size: 8px;
+    font-weight: 800;
+    color: #facc15;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .player-melds-flow {
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 4px;
+    width: 100%;
     flex: 1 1 auto;
     min-height: 0;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 2px 0;
   }
-  .player-center-hand-box {
+
+  /* MAIN BOTTOM BOX: KARTU TANGAN (HAND) */
+  .player-hand-wide-box {
     background: rgba(0, 0, 0, 0.25);
-    border: 1.5px solid rgba(250, 204, 21, 0.38);
-    border-radius: 9px;
-    padding: 2px 6px;
+    border: 1.5px solid rgba(250, 204, 21, 0.35);
+    border-radius: 12px;
+    padding: 2px 10px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     align-items: center;
+    width: 100%;
+    flex: 1 1 auto;
     min-height: 0;
     position: relative;
+    box-sizing: border-box;
     overflow: visible;
   }
-  .center-hand-hdr {
+  .player-hand-hdr {
     position: absolute;
     top: 2px;
-    left: 8px;
+    left: 10px;
     font-size: 8.5px;
     font-weight: 800;
     color: #38bdf8;
@@ -455,280 +749,54 @@ HTML_PAGE = r"""<!DOCTYPE html>
     z-index: 5;
   }
 
-  /* RIGHT COLUMN: ARENA (TOP: DECK & WILD, BOTTOM: DISCARD) */
-  #arena-col {
+  #my-hand {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-  }
-  #deck-wild-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    width: 100%;
-    height: clamp(115px, 18vh, 145px);
-    flex-shrink: 0;
-  }
-
-  /* PAK KARTU (Draw Deck 3D) */
-  #pak-box {
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
-    border: 2px solid #fbbf24;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    cursor: pointer;
-    text-align: center;
-    padding: 6px;
-    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 8px 18px rgba(0,0,0,0.65);
-    transition: transform 0.14s ease, box-shadow 0.14s ease;
-    user-select: none;
-    box-sizing: border-box;
-  }
-  #pak-box:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 14px 26px rgba(0,0,0,0.8), 0 0 16px rgba(251, 191, 36, 0.45);
-  }
-  #pak-box.glow {
-    border-color: #facc15;
-    animation: pak-glow 1.4s infinite alternate ease-in-out;
-  }
-  @keyframes pak-glow {
-    0% { box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 0 8px rgba(250, 204, 21, 0.5); }
-    100% { box-shadow: 2px 2px 0 #7f1d1d, 4px 4px 0 #600a0a, 0 0 24px rgba(250, 204, 21, 0.95); }
-  }
-
-  /* BUKAAN WILD */
-  #wild-box {
+    align-items: flex-end;
+    padding: 10px 4px 2px 4px;
     width: 100%;
     height: 100%;
-    background: radial-gradient(ellipse at center, rgba(88, 28, 135, 0.75) 0%, rgba(38, 10, 60, 0.9) 100%);
-    border: 1.5px solid #c084fc;
-    border-radius: 12px;
-    padding: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(192, 132, 252, 0.3);
-    user-select: none;
-    box-sizing: border-box;
-  }
-  #wild-card-slot .card {
-    width: clamp(56px, 4.6vw, 70px);
-    height: clamp(82px, 6.9vw, 104px);
-    cursor: default;
-  }
-  #wild-card-slot .card:hover { transform: none; }
-  #wild-card-slot .card .c-rank { font-size: 18px !important; }
-  #wild-card-slot .card .c-suit-mini { font-size: 15px !important; }
-  #wild-card-slot .card .c-center { font-size: 42px !important; }
-
-  /* ======================================================== */
-  /* DISCARD RAIL (3 HORIZONTAL BARS / ROWS AS SKETCHED)    */
-  /* ======================================================== */
-  #discard-rail {
-    background: linear-gradient(135deg, rgba(3, 24, 14, 0.94) 0%, rgba(2, 16, 9, 0.98) 100%);
-    backdrop-filter: blur(14px);
-    border: 2px solid rgba(250, 204, 21, 0.45);
-    border-radius: 14px;
-    padding: 7px 10px;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: inset 0 2px 12px rgba(0,0,0,0.55), 0 4px 14px rgba(0,0,0,0.3);
-    box-sizing: border-box;
-    overflow: hidden;
     position: relative;
-    transition: all 0.2s ease;
-  }
-  .disc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 3px;
-    flex-shrink: 0;
-  }
-  .disc-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #fde047;
-    letter-spacing: 0.3px;
-  }
-  .disc-count-pill {
-    font-size: 9.5px;
-    font-weight: 800;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.08);
-    padding: 1.5px 7px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
-
-  /* 3 HORIZONTAL BARS / ROWS DISCARD RACK */
-  #disc-rows-container {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-  }
-  .disc-bar {
-    background: rgba(0, 0, 0, 0.42);
-    border: 1.5px solid rgba(250, 204, 21, 0.28);
-    border-radius: 9px;
-    padding: 3px 8px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    flex: 1 1 0;
-    min-height: 0;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.15s ease;
-  }
-  .disc-bar:hover {
-    border-color: rgba(250, 204, 21, 0.45);
-  }
-  .disc-bar-hdr {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding-bottom: 2px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    flex-shrink: 0;
-  }
-  .disc-bar-label {
-    font-size: 8.5px;
-    font-weight: 800;
-    color: #facc15;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-  }
-  .disc-bar-count {
-    font-size: 8px;
-    font-weight: 800;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.08);
-    padding: 1px 5px;
-    border-radius: 999px;
-  }
-  .disc-bar-cards {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 2px 0;
+    box-sizing: border-box;
     overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(250, 204, 21, 0.4) transparent;
+    overflow-y: visible;
   }
-
-  /* CARD SIZING IN 3-BAR DISCARD RACK */
-  .card.disc-bar-card {
-    width: clamp(32px, 2.8vw, 42px) !important;
-    height: clamp(46px, 4.0vw, 60px) !important;
-    aspect-ratio: 2.5 / 3.6;
-    border-radius: 5px !important;
-    flex-shrink: 0;
+  #my-hand .hand-card-slot {
+    width: var(--hand-card-w);
+    height: var(--hand-card-h);
+    margin-left: calc(var(--hand-card-w) * -0.42);
     position: relative;
-    transition: transform 0.14s ease, box-shadow 0.14s ease;
-  }
-  .card.disc-bar-card .c-rank { font-size: 11px !important; }
-  .card.disc-bar-card .c-suit-mini { font-size: 9px !important; }
-  .card.disc-bar-card .c-center { font-size: 20px !important; }
-  .card.disc-bar-card .c-badge-pill {
-    position: absolute;
-    bottom: 2px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    font-size: 6.5px !important;
-    padding: 1px 3.5px !important;
-    background: #facc15;
-    color: #0f172a;
-    font-weight: 900;
-    border: 1px solid #eab308;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    border-radius: 999px;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 5;
-  }
-
-  /* GREYED OUT IN BARS */
-  .card.disc-bar-card.buried-grey {
-    filter: grayscale(1) opacity(0.42);
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    cursor: default;
-  }
-  .card.disc-bar-card.buried-grey:hover {
-    filter: grayscale(0.35) opacity(0.85);
-    transform: translateY(-2px);
-    border-color: rgba(250, 204, 21, 0.4) !important;
-    z-index: 10;
-  }
-
-  /* ACTIVE GLOWING IN BARS */
-  .card.disc-bar-card.active-discard {
-    border: 1.5px solid #facc15 !important;
-    box-shadow: 0 0 10px rgba(250, 204, 21, 0.45);
-    animation: active-disc-glow 2s infinite alternate ease-in-out;
-    cursor: grab;
-  }
-  .card.disc-bar-card.active-discard:active {
-    cursor: grabbing;
-  }
-  .card.disc-bar-card.active-discard:hover {
-    transform: translateY(-5px) scale(1.08);
-    z-index: 30;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.8), 0 0 16px rgba(250, 204, 21, 0.85);
-  }
-  @keyframes active-disc-glow {
-    0% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.35); }
-    100% { box-shadow: 0 0 18px rgba(250, 204, 21, 0.8); }
-  }
-
-  /* MINI PLACEHOLDER SLOTS IN BARS */
-  .disc-slot-placeholder-mini {
-    width: clamp(32px, 2.8vw, 42px);
-    height: clamp(46px, 4.0vw, 60px);
-    border: 1px dashed rgba(250, 204, 21, 0.22);
-    border-radius: 5px;
-    background: rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
+    cursor: grab;
     user-select: none;
+    transition: z-index 0.15s ease;
+  }
+  #my-hand .hand-card-slot:active { cursor: grabbing; }
+  #my-hand .hand-card-slot:first-child { margin-left: 0 !important; }
+  #my-hand .hand-card-slot:hover { z-index: 70; }
+  #my-hand .hand-card-slot .card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin-left: 0 !important;
+    box-shadow: -3px 0 10px rgba(0,0,0,0.45), 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
     pointer-events: none;
+    border-radius: 8px;
   }
-  .slot-num-mini {
-    font-size: 8px;
-    font-weight: 800;
-    color: rgba(250, 204, 21, 0.35);
+  #my-hand .hand-card-slot:hover .card {
+    transform: translateY(-16px);
+    box-shadow: -4px 10px 20px rgba(0,0,0,0.65), 0 0 16px rgba(250, 204, 21, 0.45);
   }
-
-  /* ======================================================== */
+  #my-hand .hand-card-slot.selected-slot .card,
+  #my-hand .hand-card-slot .card.selected {
+    transform: translateY(-22px) !important;
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 2.5px #f59e0b, 0 12px 24px rgba(245, 158, 11, 0.6) !important;
+  }
+/* ======================================================== */
   /* PLAYING CARD BASE DESIGN                                 */
   /* ======================================================== */
   .card {
@@ -2034,168 +2102,174 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <div id="hdr-status" class="status-notif" style="display:none;"></div>
   </div>
 
-  <!-- TABLE BODY SPLIT: 4 PLAYERS LEFT COLUMN vs ARENA RIGHT COLUMN -->
-  <div class="table-body-split">
-    <!-- LEFT COLUMN: 4 PLAYERS STACKED VERTICALLY -->
-    <div id="players-col">
-      <!-- OPPONENT 1 -->
-      <div id="zone-opp-1" class="zone-box player-strip opp-strip">
-        <div class="strip-hdr">
-          <div class="player-title" id="opp-1-title">Bot Budi</div>
-          <div id="opp-1-melds-label" class="strip-melds-label">Kartu Jadi:</div>
-        </div>
-        <div class="strip-body">
-          <div class="strip-hand opp-cards" id="opp-1-cards"></div>
-          <div class="strip-melds meld-container opp-melds" id="opp-1-melds">
-            <div class="meld-empty-hint">Belum ada kartu jadi</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- OPPONENT 2 -->
-      <div id="zone-opp-2" class="zone-box player-strip opp-strip">
-        <div class="strip-hdr">
-          <div class="player-title" id="opp-2-title">Bot Siti</div>
-          <div id="opp-2-melds-label" class="strip-melds-label">Kartu Jadi:</div>
-        </div>
-        <div class="strip-body">
-          <div class="strip-hand opp-cards" id="opp-2-cards"></div>
-          <div class="strip-melds meld-container opp-melds" id="opp-2-melds">
-            <div class="meld-empty-hint">Belum ada kartu jadi</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- OPPONENT 3 -->
-      <div id="zone-opp-3" class="zone-box player-strip opp-strip">
-        <div class="strip-hdr">
-          <div class="player-title" id="opp-3-title">Bot Agus</div>
-          <div id="opp-3-melds-label" class="strip-melds-label">Kartu Jadi:</div>
-        </div>
-        <div class="strip-body">
-          <div class="strip-hand opp-cards" id="opp-3-cards"></div>
-          <div class="strip-melds meld-container opp-melds" id="opp-3-melds">
-            <div class="meld-empty-hint">Belum ada kartu jadi</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PLAYER 4 (ANDA - HERO CONSOLE WITH CENTER HAND & FLANKING MELDS) -->
-      <div id="zone-bottom" class="zone-box player-strip my-strip" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
-        <div class="strip-hdr">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:10.5px;padding:2px 8px;">★ GILIRAN ANDA! ★</span>
-            <span id="my-info" class="player-title" style="font-size:12px;color:#facc15;">Anda (Player 1)</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span id="my-step-badge" style="display:none;font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;"></span>
-            <span id="my-seri-badge" style="font-size:9.5px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.35);padding:2px 7px;border-radius:999px;">
-              BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
-            </span>
-          </div>
-        </div>
-        <!-- 3 SUB-BOXES: MELDS LEFT, HAND CENTER, MELDS RIGHT -->
-        <div class="my-strip-three-col">
-          <!-- BOX 1: KARTU JADI KIRI (SERI URUT) -->
-          <div class="player-flank-box" id="my-melds-left-box">
-            <div class="flank-box-hdr">
-              <span>🎴 JADI (KIRI)</span>
-              <span style="font-size:7.5px;color:#4ade80;">SERI</span>
-            </div>
-            <div class="flank-melds-content" id="my-melds-left-cards">
-              <div class="meld-empty-hint">Belum ada seri</div>
-            </div>
-          </div>
-
-          <!-- BOX 2: KARTU TANGAN PEMAIN (TENGAH) -->
-          <div class="player-center-hand-box" id="my-center-hand-box">
-            <div class="center-hand-hdr">🃏 TANGAN ANDA</div>
-            <div id="my-hand"></div>
-          </div>
-
-          <!-- BOX 3: KARTU JADI KANAN (TRIO / SET) -->
-          <div class="player-flank-box" id="my-melds-right-box">
-            <div class="flank-box-hdr">
-              <span>🎴 JADI (KANAN)</span>
-              <span style="font-size:7.5px;color:#facc15;">TRIO/SET</span>
-            </div>
-            <div class="flank-melds-content" id="my-melds-right-cards">
-              <div class="meld-empty-hint">Belum ada set</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- HIDDEN COMPATIBILITY ELEMENT -->
-        <div id="my-melds" style="display:none;"></div>
-      </div>
-    </div>
-
-    <!-- RIGHT COLUMN: ARENA (TOP: DECK & WILD, BOTTOM: DISCARD) -->
+  <!-- MAIN ARENA SPLIT: LEFT (DISCARD & DECK) vs RIGHT (3 OPPONENTS) -->
+  <div class="table-main-split">
+    <!-- LEFT COLUMN: ARENA (ACTIVE DISCARD, BURIED DISCARD, DECK & WILD) -->
     <div id="arena-col">
-      <!-- TOP ROW: PAK KARTU & BUKAAN WILD SIDE-BY-SIDE -->
-      <div id="deck-wild-row">
-        <!-- PAK KARTU -->
-        <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu (D)">
-          <div class="pak-label">PAK KARTU</div>
-          <div id="pak-count" class="pak-count">(24)</div>
-          <div class="pak-hint">KLIK / TARIK (D)</div>
+      <!-- ROW 1: 7 KARTU BUANGAN (AKTIF) -->
+      <div id="disc-active-bar" class="arena-bar" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
+        <div class="arena-bar-hdr">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="bar-hdr-icon">🎴</span>
+            <span class="bar-hdr-title">7 KARTU BUANGAN (AKTIF)</span>
+          </div>
+          <span id="disc-active-pill" class="arena-pill">0/7 Aktif</span>
         </div>
+        <div id="disc-active-cards" class="disc-active-grid"></div>
+      </div>
 
-        <!-- BUKAAN WILD -->
-        <div id="wild-box">
-          <div id="wild-title" class="wild-title">BUKAAN WILD</div>
-          <div id="wild-card-slot"></div>
+      <!-- ROW 2: KARTU BUANGAN LEBIH DARI 7 (TERKUBUR) -->
+      <div id="disc-buried-bar" class="arena-bar">
+        <div class="arena-bar-hdr">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="bar-hdr-icon">🗄️</span>
+            <span class="bar-hdr-title">KARTU BUANGAN LEBIH DARI 7 (TERKUBUR)</span>
+          </div>
+          <span id="disc-buried-pill" class="arena-pill">0 Terkubur</span>
+        </div>
+        <div id="disc-buried-cards" class="disc-buried-scroll">
+          <span class="buried-empty-hint">Belum ada kartu buangan lebih dari 7</span>
         </div>
       </div>
 
-      <!-- BOTTOM ROW: TUMPUKAN BUANGAN (3 HORIZONTAL BARS DISCARD RACK) -->
-      <div id="discard-rail" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
-        <div class="disc-header">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="disc-header-icon">🎴</span>
-            <span id="disc-title" class="disc-title">TUMPUKAN BUANGAN:</span>
+      <!-- ROW 3: PAK KARTU & BUKAAN WILD (SIDE-BY-SIDE) -->
+      <div id="deck-wild-row">
+        <!-- PAK KARTU (WITH DESIGN BELAKANG KARTU) -->
+        <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu (D)">
+          <div class="pak-card-back-visual">
+            <div class="card-back pak-mini-deck">
+              <span class="card-back-suit">♠</span>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span id="disc-count-pill" class="disc-count-pill">0 Kartu</span>
-            <span class="disc-active-hint" style="font-size:9px;color:#facc15;font-weight:700;">(7 Teratas Aktif)</span>
+          <div class="pak-info-side">
+            <div class="pak-label">PAK KARTU</div>
+            <div id="pak-count" class="pak-count">(24)</div>
+            <div class="pak-hint">KLIK / TARIK (D)</div>
           </div>
         </div>
 
-        <!-- 3 HORIZONTAL BARS / ROWS AS SKETCHED -->
-        <div id="disc-rows-container">
-          <!-- ROW 1 (TOP BAR: Kartu 1 - 7) -->
-          <div class="disc-bar" id="disc-bar-1">
-            <div class="disc-bar-hdr">
-              <span class="disc-bar-label">BARIS #1</span>
-              <span class="disc-bar-count" id="disc-bar-1-count">0/7</span>
-            </div>
-            <div class="disc-bar-cards" id="disc-bar-1-cards"></div>
-          </div>
-
-          <!-- ROW 2 (MID BAR: Kartu 8 - 14) -->
-          <div class="disc-bar" id="disc-bar-2">
-            <div class="disc-bar-hdr">
-              <span class="disc-bar-label">BARIS #2</span>
-              <span class="disc-bar-count" id="disc-bar-2-count">0/7</span>
-            </div>
-            <div class="disc-bar-cards" id="disc-bar-2-cards"></div>
-          </div>
-
-          <!-- ROW 3 (BOTTOM BAR: Kartu 15 - 21+) -->
-          <div class="disc-bar" id="disc-bar-3">
-            <div class="disc-bar-hdr">
-              <span class="disc-bar-label">BARIS #3</span>
-              <span class="disc-bar-count" id="disc-bar-3-count">0/7</span>
-            </div>
-            <div class="disc-bar-cards" id="disc-bar-3-cards"></div>
+        <!-- BUKAAN WILD (WITH BUKAAN WILD X5) -->
+        <div id="wild-box">
+          <div id="wild-card-slot" class="wild-card-holder"></div>
+          <div class="wild-info-side">
+            <div id="wild-title" class="wild-label">BUKAAN WILD</div>
+            <div class="wild-sub">PENGALI SKOR</div>
           </div>
         </div>
-
-        <!-- HIDDEN COMPATIBILITY CONTAINERS -->
-        <div id="disc-cards" style="display:none;"></div>
-        <div id="disc-buried-tray" style="display:none;"></div>
       </div>
     </div>
+
+    <!-- RIGHT COLUMN: 3 OPPONENTS STACKED (JUMLAH KARTU LEFT + KARTU JADI RIGHT) -->
+    <div id="opponents-col">
+      <!-- OPPONENT 1 (TOP) -->
+      <div id="zone-opp-1" class="zone-box opp-split-pod">
+        <div class="opp-split-hdr">
+          <div class="player-title" id="opp-1-title">Bot Budi</div>
+          <div id="opp-1-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+        </div>
+        <div class="opp-split-body">
+          <!-- LEFT: JUMLAH KARTU (NUMBER) -->
+          <div class="opp-count-box" id="opp-1-cards">
+            <div class="opp-hand-count-visual">
+              <div class="card-back opp-card-back-icon"><span>♠</span></div>
+              <div class="opp-count-info">
+                <span class="opp-count-num">7</span>
+                <span class="opp-count-txt">KARTU</span>
+              </div>
+            </div>
+          </div>
+          <!-- RIGHT: KARTU JADI (WIDE BOX) -->
+          <div class="opp-melds-box meld-container" id="opp-1-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPPONENT 2 (MID) -->
+      <div id="zone-opp-2" class="zone-box opp-split-pod">
+        <div class="opp-split-hdr">
+          <div class="player-title" id="opp-2-title">Bot Siti</div>
+          <div id="opp-2-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+        </div>
+        <div class="opp-split-body">
+          <!-- LEFT: JUMLAH KARTU (NUMBER) -->
+          <div class="opp-count-box" id="opp-2-cards">
+            <div class="opp-hand-count-visual">
+              <div class="card-back opp-card-back-icon"><span>♠</span></div>
+              <div class="opp-count-info">
+                <span class="opp-count-num">7</span>
+                <span class="opp-count-txt">KARTU</span>
+              </div>
+            </div>
+          </div>
+          <!-- RIGHT: KARTU JADI (WIDE BOX) -->
+          <div class="opp-melds-box meld-container" id="opp-2-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPPONENT 3 (BOTTOM) -->
+      <div id="zone-opp-3" class="zone-box opp-split-pod">
+        <div class="opp-split-hdr">
+          <div class="player-title" id="opp-3-title">Bot Agus</div>
+          <div id="opp-3-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+        </div>
+        <div class="opp-split-body">
+          <!-- LEFT: JUMLAH KARTU (NUMBER) -->
+          <div class="opp-count-box" id="opp-3-cards">
+            <div class="opp-hand-count-visual">
+              <div class="card-back opp-card-back-icon"><span>♠</span></div>
+              <div class="opp-count-info">
+                <span class="opp-count-num">7</span>
+                <span class="opp-count-txt">KARTU</span>
+              </div>
+            </div>
+          </div>
+          <!-- RIGHT: KARTU JADI (WIDE BOX) -->
+          <div class="opp-melds-box meld-container" id="opp-3-melds">
+            <div class="meld-empty-hint">Belum ada kartu jadi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER HERO CONSOLE: ROUNDED CASINO STADIUM ACROSS BOTTOM -->
+  <div id="zone-bottom" class="zone-box player-stadium-console" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
+    <div class="stadium-hdr">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:10.5px;padding:2px 8px;">★ GILIRAN ANDA! ★</span>
+        <span id="my-info" class="player-title" style="font-size:12px;color:#facc15;">Anda (Player 1)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="my-step-badge" style="display:none;font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;"></span>
+        <span id="my-seri-badge" style="font-size:9.5px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.35);padding:2px 7px;border-radius:999px;">
+          BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
+        </span>
+      </div>
+    </div>
+
+    <!-- TOP CENTER BOX: KARTU JADI (MELDS) -->
+    <div id="player-melds-center-box" class="player-melds-center-box">
+      <div class="player-melds-hdr">🎴 KARTU JADI ANDA (MELDS DI MEJA)</div>
+      <div id="my-melds" class="meld-container player-melds-flow">
+        <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
+      </div>
+    </div>
+
+    <!-- MAIN BOTTOM BOX: KARTU TANGAN (HAND) -->
+    <div id="player-hand-wide-box" class="player-hand-wide-box">
+      <div class="player-hand-hdr">🃏 KARTU TANGAN ANDA</div>
+      <div id="my-hand"></div>
+    </div>
+
+    <!-- HIDDEN COMPATIBILITY CONTAINERS -->
+    <div id="my-melds-left-cards" style="display:none;"></div>
+    <div id="my-melds-right-cards" style="display:none;"></div>
+    <div id="disc-cards" style="display:none;"></div>
+    <div id="disc-buried-tray" style="display:none;"></div>
+    <div id="discard-rail" style="display:none;"></div>
   </div>
 
   <!-- ACTION DOCK (ALWAYS 100% VISIBLE & ACCESSIBLE!) -->
@@ -2514,7 +2588,7 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
   const meldsEl = document.getElementById(`${prefix}-melds`);
 
   if (!zoneEl || !p) return;
-  const basePodClass = 'zone-box player-strip opp-strip';
+  const basePodClass = 'zone-box opp-split-pod';
   zoneEl.className = basePodClass + (isTurn ? ' zone-active opponent-turn-active' : '');
 
   const badgeHTML = isTurn ? `<span class="turn-badge" style="background:#38bdf8;color:#082f49;box-shadow:0 0 10px #38bdf8;">⏳ SEDANG JALAN...</span> ` : '';
@@ -2529,11 +2603,18 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
 
   let handHTML = '';
   if (showFace && p.hand && p.hand.length) {
-    handHTML = p.hand.map(c => renderCardHTML(c, { small: true })).join('');
+    handHTML = `<div style="display:flex;gap:2px;overflow-x:auto;">` + p.hand.map(c => renderCardHTML(c, { small: true })).join('') + `</div>`;
   } else {
-    for (let i = 0; i < p.hand_count; i++) {
-      handHTML += `<div class="card-back"></div>`;
-    }
+    // Elegant casino card back with "jumlah kartu (number)"
+    handHTML = `
+      <div class="opp-hand-count-visual" title="${p.name} memegang ${p.hand_count} kartu">
+        <div class="card-back opp-card-back-icon"><span>♠</span></div>
+        <div class="opp-count-info">
+          <span class="opp-count-num">${p.hand_count}</span>
+          <span class="opp-count-txt">KARTU</span>
+        </div>
+      </div>
+    `;
   }
   if (cardsEl) cardsEl.innerHTML = handHTML;
 
@@ -2811,115 +2892,78 @@ function updateUI(st) {
     }
   }
 
-  // Render Discard Rail (3 Horizontal Bars as Sketched: Bar 1, Bar 2, Bar 3)
-  const discTitleEl = document.getElementById('disc-title');
-  const discCountPill = document.getElementById('disc-count-pill');
-  const bar1CardsEl = document.getElementById('disc-bar-1-cards');
-  const bar2CardsEl = document.getElementById('disc-bar-2-cards');
-  const bar3CardsEl = document.getElementById('disc-bar-3-cards');
-  const bar1CountEl = document.getElementById('disc-bar-1-count');
-  const bar2CountEl = document.getElementById('disc-bar-2-count');
-  const bar3CountEl = document.getElementById('disc-bar-3-count');
+  // Render Discard Bars (Row 1: 7 Kartu Buangan Aktif, Row 2: Kartu Buangan > 7 Terkubur)
+  const discActiveCardsEl = document.getElementById('disc-active-cards');
+  const discBuriedCardsEl = document.getElementById('disc-buried-cards');
+  const discActivePill = document.getElementById('disc-active-pill');
+  const discBuriedPill = document.getElementById('disc-buried-pill');
 
-  if (bar1CardsEl && bar2CardsEl && bar3CardsEl) {
+  if (discActiveCardsEl && discBuriedCardsEl) {
     const totalDisc = discards.length;
     const MAX_ACTIVE = 7;
     const startIdx = Math.max(0, totalDisc - MAX_ACTIVE);
     const buriedCount = startIdx;
+    const activeCount = Math.min(totalDisc, MAX_ACTIVE);
 
-    if (discTitleEl) {
-      discTitleEl.textContent = 'TUMPUKAN BUANGAN:';
-    }
-    if (discCountPill) {
-      discCountPill.textContent = `${totalDisc} Kartu${buriedCount > 0 ? ` (${buriedCount} Terkubur)` : ''}`;
-    }
+    if (discActivePill) discActivePill.textContent = `${activeCount}/7 Aktif`;
+    if (discBuriedPill) discBuriedPill.textContent = `${buriedCount} Terkubur`;
 
     const discSig = discards.map(c => c.id).join(',') + '|' + isMyTurn + '|' + st.phase;
     if (discSig !== lastDiscSig) {
       lastDiscSig = discSig;
 
-      const renderCardInBar = (c, i) => {
-        const isActive = (i >= startIdx);
-        if (isActive) {
-          const revIdx = (totalDisc - 1) - i; // 0 for newest (rightmost)
-          const sliceToRight = discards.slice(i);
+      // 1. ROW 1: 7 KARTU BUANGAN (AKTIF)
+      const top7Discards = discards.slice(startIdx);
+      let activeHtml = '';
+      for (let slot = 0; slot < MAX_ACTIVE; slot++) {
+        if (slot < top7Discards.length) {
+          const c = top7Discards[slot];
+          const actualIndex = startIdx + slot;
+          const revIdx = (top7Discards.length - 1) - slot; // 0 for newest (rightmost)
+          const sliceToRight = top7Discards.slice(slot);
           const blockedByWild = sliceToRight.some(x => x.is_wild || x.rank === 'JOKER');
           const isWildSelf = Boolean(c.is_wild || c.rank === 'JOKER');
           const badgeText = isWildSelf ? 'WILD MATI' : (blockedByWild ? 'TERKUNCI' : `AMBIL #${revIdx + 1}`);
           const canClick = isMyTurn && (st.phase === 'TURN_DRAW') && !blockedByWild;
 
-          return renderCardHTML(c, {
+          activeHtml += renderCardHTML(c, {
             badge: badgeText,
             locked: blockedByWild,
-            onclick: canClick ? `takeDiscard(${i})` : '',
+            onclick: canClick ? `takeDiscard(${actualIndex})` : '',
             draggable: canClick,
-            ondragstart: canClick ? `onDiscardDragStart(event, ${i})` : '',
+            ondragstart: canClick ? `onDiscardDragStart(event, ${actualIndex})` : '',
             ondragend: `onDragEndClean(event)`,
             hint: blockedByWild
               ? `Tidak bisa diambil karena terhalang / merupakan Wild Card buangan`
               : `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
-          }).replace('class="card', 'class="card active-discard disc-bar-card');
+          }).replace('class="card', 'class="card active-discard');
         } else {
+          // Static Slot Placeholder
+          const slotNum = slot + 1;
+          activeHtml += `<div class="disc-slot-placeholder" title="Slot Kartu Buangan #${slotNum} (Kosong)">
+            <span class="disc-slot-num">SLOT #${slotNum}</span>
+            <span class="disc-slot-icon">🂠</span>
+          </div>`;
+        }
+      }
+      discActiveCardsEl.innerHTML = activeHtml;
+
+      // 2. ROW 2: KARTU BUANGAN LEBIH DARI 7 (TERKUBUR)
+      if (buriedCount === 0) {
+        discBuriedCardsEl.innerHTML = '<span class="buried-empty-hint">Belum ada kartu buangan lebih dari 7</span>';
+      } else {
+        const buriedCards = discards.slice(0, startIdx);
+        let buriedHtml = buriedCards.map((c, bi) => {
           return renderCardHTML(c, {
             locked: true,
-            hint: `Kartu buangan lama #${i + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif (Tidak dapat diambil)`
-          }).replace('class="card', 'class="card buried-grey disc-bar-card');
-        }
-      };
-
-      const renderSlotPlaceholder = (slotNum) => {
-        return `<div class="disc-slot-placeholder-mini" title="Slot #${slotNum} (Kosong)">
-          <span class="slot-num-mini">#${slotNum}</span>
-        </div>`;
-      };
-
-      // Bar 1: cards 0 to 6
-      let b1Html = '';
-      const b1Cards = discards.slice(0, 7);
-      for (let i = 0; i < b1Cards.length; i++) {
-        b1Html += renderCardInBar(b1Cards[i], i);
+            hint: `Kartu buangan lama #${bi + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif`
+          }).replace('class="card', 'class="card buried-grey');
+        }).join('');
+        discBuriedCardsEl.innerHTML = buriedHtml;
+        requestAnimationFrame(() => {
+          discBuriedCardsEl.scrollLeft = discBuriedCardsEl.scrollWidth;
+        });
       }
-      for (let s = b1Cards.length; s < 7; s++) {
-        b1Html += renderSlotPlaceholder(s + 1);
-      }
-      bar1CardsEl.innerHTML = b1Html;
-      if (bar1CountEl) bar1CountEl.textContent = `${b1Cards.length}/7`;
-
-      // Bar 2: cards 7 to 13
-      let b2Html = '';
-      const b2Cards = discards.slice(7, 14);
-      for (let i = 0; i < b2Cards.length; i++) {
-        b2Html += renderCardInBar(b2Cards[i], 7 + i);
-      }
-      for (let s = b2Cards.length; s < 7; s++) {
-        b2Html += renderSlotPlaceholder(7 + s + 1);
-      }
-      bar2CardsEl.innerHTML = b2Html;
-      if (bar2CountEl) bar2CountEl.textContent = `${b2Cards.length}/7`;
-
-      // Bar 3: cards 14 onwards
-      let b3Html = '';
-      const b3Cards = discards.slice(14);
-      for (let i = 0; i < b3Cards.length; i++) {
-        b3Html += renderCardInBar(b3Cards[i], 14 + i);
-      }
-      const b3PlaceholderCount = Math.max(0, 7 - b3Cards.length);
-      for (let s = 0; s < b3PlaceholderCount; s++) {
-        b3Html += renderSlotPlaceholder(14 + b3Cards.length + s + 1);
-      }
-      bar3CardsEl.innerHTML = b3Html;
-      if (bar3CountEl) bar3CountEl.textContent = `${b3Cards.length}${b3Cards.length > 7 ? '' : '/7'}`;
-
-      // Smooth auto-scroll the active bar to the right
-      requestAnimationFrame(() => {
-        if (totalDisc > 14) {
-          bar3CardsEl.scrollLeft = bar3CardsEl.scrollWidth;
-        } else if (totalDisc > 7) {
-          bar2CardsEl.scrollLeft = bar2CardsEl.scrollWidth;
-        } else if (totalDisc > 0) {
-          bar1CardsEl.scrollLeft = bar1CardsEl.scrollWidth;
-        }
-      });
     }
   }
 
@@ -3643,14 +3687,12 @@ function enableDragScroll(el) {
   });
 }
 window.addEventListener('DOMContentLoaded', () => {
-  enableDragScroll(document.getElementById('disc-bar-1-cards'));
-enableDragScroll(document.getElementById('disc-bar-2-cards'));
-enableDragScroll(document.getElementById('disc-bar-3-cards'));
+  enableDragScroll(document.getElementById('disc-active-cards'));
+enableDragScroll(document.getElementById('disc-buried-cards'));
   enableDragScroll(document.getElementById('my-hand'));
 });
-enableDragScroll(document.getElementById('disc-bar-1-cards'));
-enableDragScroll(document.getElementById('disc-bar-2-cards'));
-enableDragScroll(document.getElementById('disc-bar-3-cards'));
+enableDragScroll(document.getElementById('disc-active-cards'));
+enableDragScroll(document.getElementById('disc-buried-cards'));
 enableDragScroll(document.getElementById('my-hand'));
 
 function onHandDragOver(e) {
