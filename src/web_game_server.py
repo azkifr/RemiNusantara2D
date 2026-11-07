@@ -280,7 +280,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   .table-main-split {
     display: grid;
-    grid-template-columns: minmax(440px, 1.22fr) minmax(360px, 1fr);
+    grid-template-columns: clamp(520px, 36.5vw, 685px) 1fr;
     gap: 10px;
     width: 100%;
     flex: 1 1 auto;
@@ -585,7 +585,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
   .opp-split-body {
     display: grid;
-    grid-template-columns: clamp(75px, 8vw, 95px) 1fr;
+    grid-template-columns: clamp(115px, 9.5vw, 135px) 1fr;
     gap: 8px;
     width: 100%;
     flex: 1 1 auto;
@@ -2011,23 +2011,27 @@ HTML_PAGE = r"""<!DOCTYPE html>
     font-size: 11cqh !important; bottom: 3cqh !important; display: block !important;
   }
 
-  /* ---------- 1. 7 KARTU BUANGAN AKTIF: isi tinggi baris ---------- */
+  /* ---------- 1. 7 KARTU BUANGAN AKTIF: paskan 7 slot dari ujung ke ujung ---------- */
   #disc-active-cards {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
     gap: 6px;
-    padding: 7px 2px 3px 2px;
+    padding: 7px 4px 3px 4px;
     overflow-y: hidden;
     align-items: center;
+    width: 100%;
+    box-sizing: border-box;
   }
   #disc-active-cards .card,
   #disc-active-cards .disc-slot-placeholder {
-    height: min(100cqh, calc((100cqw - 36px) / 7 * 1.4)) !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: none !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 100cqh !important;
     aspect-ratio: 5 / 7;
     margin: 0 !important;
     flex-shrink: 0;
     border-radius: 7cqh;
+    box-sizing: border-box;
   }
   #disc-active-cards .card { border-radius: 8px; }
   .disc-slot-placeholder {
@@ -2121,13 +2125,28 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* ---------- 4. LAWAN: jumlah kartu + kartu jadi isi tinggi kotak ---------- */
   .opp-split-body {
+    grid-template-columns: clamp(115px, 9.5vw, 135px) 1fr;
     grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
+    gap: 8px;
   }
-  .opp-count-box, .opp-melds-box { height: auto; padding: 4px 6px; }
-  .opp-count-box .opp-hand-count-visual { height: 100%; gap: 8px; }
+  .opp-count-box, .opp-melds-box { height: auto; min-height: 0; }
+  .opp-count-box {
+    padding: 4px 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .opp-count-box .opp-hand-count-visual {
+    height: 100%;
+    width: 100%;
+    gap: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .opp-count-box .opp-card-back-icon {
-    height: 100cqh !important;
+    height: calc(100cqh - 10px) !important;
+    max-height: calc(100% - 2px) !important;
     width: auto !important;
     aspect-ratio: 5 / 7;
     border-radius: 6px !important;
@@ -2136,21 +2155,51 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 2px 2px 0 #7f1d1d, 0 3px 6px rgba(0,0,0,0.6) !important;
   }
   .opp-count-box .opp-card-back-icon::after { content: none; }
   .opp-count-box .opp-card-back-icon span {
-    font-size: 34cqh;
+    font-size: 28cqh;
     color: #fde047;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .opp-count-box .opp-count-num { font-size: clamp(14px, 42cqh, 34px); line-height: 0.95; font-variant-numeric: tabular-nums; }
-  .opp-count-box .opp-count-txt { font-size: clamp(7px, 12cqh, 10px); }
+  .opp-count-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .opp-count-box .opp-count-num {
+    font-size: clamp(16px, 34cqh, 26px);
+    font-weight: 900;
+    color: #facc15;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  .opp-count-box .opp-count-txt {
+    font-size: clamp(7.5px, 11cqh, 9.5px);
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 0.6px;
+    margin-top: 2px;
+  }
   .opp-count-box > div[style] { height: 100%; align-items: center; }
-  .opp-count-box .card.small { height: 100cqh !important; width: auto !important; }
-  .opp-melds-box { justify-content: flex-start; align-items: center; gap: 6px; flex-wrap: nowrap; }
+  .opp-count-box .card.small { height: calc(100cqh - 8px) !important; width: auto !important; }
+  .opp-melds-box {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    padding: 3px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
   .opp-melds-box .meld-group,
   #my-melds .meld-group {
     height: 100%;
@@ -2889,8 +2938,8 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
 
   if (meldsLabelEl) {
     const seriTag = p.has_seri
-      ? '<span style="color:#4ade80;">(Ada Seri ✓)</span>'
-      : '<span style="color:#f87171;">(Belum Ada Seri ⚠)</span>';
+      ? '<span style="color:#4ade80;">(Ada Seri &#x2714;)</span>'
+      : '<span style="color:#f87171;">(Belum Ada Seri &#x26A0;)</span>';
     meldsLabelEl.innerHTML = `Kartu Jadi ${seriTag}:`;
   }
 
