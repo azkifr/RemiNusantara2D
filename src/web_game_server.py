@@ -319,7 +319,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex: 1 1 0;
   }
   .my-strip {
-    flex: 1.45 1 0;
+    flex: 1.6 1 0;
     border-color: rgba(250, 204, 21, 0.45);
     background: linear-gradient(135deg, rgba(4, 28, 17, 0.92) 0%, rgba(2, 18, 11, 0.96) 100%);
     box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
@@ -379,18 +379,80 @@ HTML_PAGE = r"""<!DOCTYPE html>
     border: none;
     padding: 0;
   }
-  .my-strip-body .strip-hand {
-    flex: 1.35;
-    min-width: 0;
-    height: 100%;
+
+  /* PLAYER 4 (ANDA): 3-BOX LAYOUT (MELDS LEFT - HAND CENTER - MELDS RIGHT) */
+  .my-strip-three-col {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.78fr) minmax(260px, 2.1fr) minmax(90px, 0.78fr);
+    gap: 7px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+  }
+  .player-flank-box {
+    background: rgba(0, 0, 0, 0.42);
+    border: 1.5px solid rgba(250, 204, 21, 0.28);
+    border-radius: 9px;
+    padding: 3px 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .player-flank-box:hover {
+    border-color: rgba(250, 204, 21, 0.45);
+  }
+  .flank-box-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #fde047;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+  .flank-melds-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 0;
+  }
+  .player-center-hand-box {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1.5px solid rgba(250, 204, 21, 0.38);
+    border-radius: 9px;
+    padding: 2px 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 0;
+    position: relative;
     overflow: visible;
   }
-  .my-strip-body .strip-melds {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    justify-content: flex-start;
-    overflow-x: auto;
+  .center-hand-hdr {
+    position: absolute;
+    top: 2px;
+    left: 8px;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #38bdf8;
+    letter-spacing: 0.3px;
+    pointer-events: none;
+    z-index: 5;
   }
 
   /* RIGHT COLUMN: ARENA (TOP: DECK & WILD, BOTTOM: DISCARD) */
@@ -407,124 +469,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     width: 100%;
-    height: clamp(120px, 19vh, 155px);
+    height: clamp(115px, 18vh, 145px);
     flex-shrink: 0;
-  }
-
-  /* OPPONENT ACTIVE TURN HIGHLIGHT */
-  .opponent-turn-active {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 24px rgba(56, 189, 248, 0.7), inset 0 0 14px rgba(56, 189, 248, 0.25) !important;
-    animation: opp-turn-pulse 1.4s infinite alternate ease-in-out;
-  }
-  @keyframes opp-turn-pulse {
-    0% { border-color: #0284c7; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4); }
-    100% { border-color: #7dd3fc; box-shadow: 0 0 28px rgba(56, 189, 248, 0.85); }
-  }
-
-  /* DRAG & DROP TARGET VISUAL FEEDBACK */
-  .drop-target-active {
-    border-color: #4ade80 !important;
-    box-shadow: 0 0 32px rgba(74, 222, 128, 0.85), inset 0 0 18px rgba(74, 222, 128, 0.35) !important;
-  }
-  .drop-target-discard {
-    border-color: #f87171 !important;
-    box-shadow: 0 0 32px rgba(248, 113, 113, 0.85), inset 0 0 18px rgba(248, 113, 113, 0.35) !important;
-  }
-
-  .player-title {
-    font-size: 11.5px;
-    font-weight: 800;
-    color: #f1f5f9;
-    letter-spacing: 0.3px;
-    text-align: center;
-    line-height: 1.3;
-  }
-  .turn-badge {
-    background: #facc15;
-    color: #022c16;
-    font-weight: 900;
-    font-size: 9px;
-    padding: 1px 7px;
-    border-radius: 999px;
-    letter-spacing: 0.3px;
-    animation: pulse-glow 1.2s infinite alternate ease-in-out;
-    margin-bottom: 2px;
-  }
-  @keyframes pulse-glow {
-    0% { transform: scale(0.97); opacity: 0.85; }
-    100% { transform: scale(1.03); opacity: 1; filter: drop-shadow(0 0 6px #facc15); }
-  }
-
-  .cards-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .opp-cards {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 2px;
-  }
-  .opp-cards .card-back + .card-back {
-    margin-left: -20px;
-  }
-
-  /* ======================================================== */
-  /* PROMINENT MELDS CONTAINER (KARTU JADI PEMAIN LAIN)       */
-  /* ======================================================== */
-  .meld-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    min-height: 22px;
-    padding: 2px 4px;
-    background: transparent;
-    border: none;
-  }
-  .meld-empty-hint {
-    font-size: 9.5px;
-    color: rgba(255,255,255,0.35);
-    font-style: italic;
-    padding: 2px 6px;
-    text-align: center;
-  }
-  .meld-group {
-    display: flex;
-    gap: 2px;
-    padding: 3px 5px;
-    background: rgba(255,255,255,0.08);
-    border: 1.5px solid rgba(250, 204, 21, 0.4);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-  }
-
-  /* CARD BACK */
-  .card-back {
-    width: 38px;
-    height: 52px;
-    background: radial-gradient(circle at center, #991b1b 0%, #580c0c 100%);
-    border: 1.5px solid #fbbf24;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fde047;
-    font-size: 8px;
-    font-weight: 900;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.45);
-    position: relative;
-    user-select: none;
-    flex-shrink: 0;
-  }
-  .card-back::after {
-    content: "♠";
-    font-size: 12px;
-    opacity: 0.85;
   }
 
   /* PAK KARTU (Draw Deck 3D) */
@@ -586,14 +532,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #wild-card-slot .card .c-center { font-size: 42px !important; }
 
   /* ======================================================== */
-  /* DISCARD RAIL (OLDER CARDS GREYED OUT, TOP 7 GLOWING)     */
+  /* DISCARD RAIL (3 HORIZONTAL BARS / ROWS AS SKETCHED)    */
   /* ======================================================== */
   #discard-rail {
     background: linear-gradient(135deg, rgba(3, 24, 14, 0.94) 0%, rgba(2, 16, 9, 0.98) 100%);
     backdrop-filter: blur(14px);
     border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 8px 12px;
+    padding: 7px 10px;
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
@@ -611,132 +557,175 @@ HTML_PAGE = r"""<!DOCTYPE html>
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     flex-shrink: 0;
   }
   .disc-title {
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 800;
     color: #fde047;
     letter-spacing: 0.3px;
   }
   .disc-count-pill {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 800;
     color: #94a3b8;
     background: rgba(255, 255, 255, 0.08);
-    padding: 2px 8px;
+    padding: 1.5px 7px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  /* HORIZONTAL DISCARD TRAIL: BOTH GREYED OUT & GLOWING ACTIVE 7 */
-  #disc-cards {
+  /* 3 HORIZONTAL BARS / ROWS DISCARD RACK */
+  #disc-rows-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .disc-bar {
+    background: rgba(0, 0, 0, 0.42);
+    border: 1.5px solid rgba(250, 204, 21, 0.28);
+    border-radius: 9px;
+    padding: 3px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1 1 0;
+    min-height: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
+  }
+  .disc-bar:hover {
+    border-color: rgba(250, 204, 21, 0.45);
+  }
+  .disc-bar-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+  .disc-bar-label {
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #facc15;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .disc-bar-count {
+    font-size: 8px;
+    font-weight: 800;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 5px;
+    border-radius: 999px;
+  }
+  .disc-bar-cards {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
-    padding: 8px 4px;
+    padding: 2px 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
-    scrollbar-color: rgba(250, 204, 21, 0.45) transparent;
+    scrollbar-color: rgba(250, 204, 21, 0.4) transparent;
   }
-  #disc-cards .card {
-    width: clamp(56px, 4.6vw, 74px);
-    height: clamp(84px, 6.9vw, 110px);
+
+  /* CARD SIZING IN 3-BAR DISCARD RACK */
+  .card.disc-bar-card {
+    width: clamp(32px, 2.8vw, 42px) !important;
+    height: clamp(46px, 4.0vw, 60px) !important;
+    aspect-ratio: 2.5 / 3.6;
+    border-radius: 5px !important;
     flex-shrink: 0;
     position: relative;
-    border-radius: 8px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
   }
-
-  /* GREYED OUT BURIED CARDS (> 7 CARDS OLD) */
-  #disc-cards .card.buried-grey {
-    filter: grayscale(1) opacity(0.42);
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    cursor: default;
-  }
-  #disc-cards .card.buried-grey:hover {
-    filter: grayscale(0.4) opacity(0.85);
-    transform: translateY(-3px);
-    border-color: rgba(250, 204, 21, 0.45) !important;
-    z-index: 5;
-  }
-
-  /* ACTIVE TOP 7 CARDS (GLOWING / MENYALA) */
-  #disc-cards .card.active-discard {
-    border: 2px solid #facc15 !important;
-    box-shadow: 0 0 14px rgba(250, 204, 21, 0.45), 0 4px 12px rgba(0,0,0,0.5);
-    animation: active-disc-glow 2s infinite alternate ease-in-out;
-    cursor: grab;
-  }
-  #disc-cards .card.active-discard:active {
-    cursor: grabbing;
-  }
-  #disc-cards .card.active-discard:hover {
-    transform: translateY(-8px) scale(1.05);
-    z-index: 25;
-    box-shadow: 0 12px 26px rgba(0,0,0,0.85), 0 0 22px rgba(250, 204, 21, 0.85);
-  }
-  @keyframes active-disc-glow {
-    0% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.35), 0 4px 10px rgba(0,0,0,0.5); }
-    100% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.8), 0 6px 16px rgba(0,0,0,0.6); }
-  }
-
-  /* PLACEHOLDER SLOTS WHEN FEWER THAN 7 DISCARD CARDS */
-  .disc-slot-placeholder {
-    width: clamp(56px, 4.6vw, 74px);
-    height: clamp(84px, 6.9vw, 110px);
-    flex-shrink: 0;
-    border: 1.5px dashed rgba(250, 204, 21, 0.3);
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    color: rgba(250, 204, 21, 0.45);
-    user-select: none;
-    pointer-events: none;
-    margin: 0;
-  }
-  .disc-slot-num {
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-  }
-  .disc-slot-icon {
-    font-size: 15px;
-    opacity: 0.35;
-  }
-
-  /* ENLARGED LOGO & RANK IN DISCARD RAIL */
-  #disc-cards .c-rank { font-size: 16px !important; }
-  #disc-cards .c-suit-mini { font-size: 13px !important; }
-  #disc-cards .c-center { font-size: 34px !important; }
-  #disc-cards .c-badge-pill {
+  .card.disc-bar-card .c-rank { font-size: 11px !important; }
+  .card.disc-bar-card .c-suit-mini { font-size: 9px !important; }
+  .card.disc-bar-card .c-center { font-size: 20px !important; }
+  .card.disc-bar-card .c-badge-pill {
     position: absolute;
-    bottom: 3px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 8px;
-    padding: 1.5px 5px;
+    bottom: 2px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 6.5px !important;
+    padding: 1px 3.5px !important;
     background: #facc15;
     color: #0f172a;
     font-weight: 900;
     border: 1px solid #eab308;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     border-radius: 999px;
     white-space: nowrap;
     pointer-events: none;
     z-index: 5;
+  }
+
+  /* GREYED OUT IN BARS */
+  .card.disc-bar-card.buried-grey {
+    filter: grayscale(1) opacity(0.42);
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    cursor: default;
+  }
+  .card.disc-bar-card.buried-grey:hover {
+    filter: grayscale(0.35) opacity(0.85);
+    transform: translateY(-2px);
+    border-color: rgba(250, 204, 21, 0.4) !important;
+    z-index: 10;
+  }
+
+  /* ACTIVE GLOWING IN BARS */
+  .card.disc-bar-card.active-discard {
+    border: 1.5px solid #facc15 !important;
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.45);
+    animation: active-disc-glow 2s infinite alternate ease-in-out;
+    cursor: grab;
+  }
+  .card.disc-bar-card.active-discard:active {
+    cursor: grabbing;
+  }
+  .card.disc-bar-card.active-discard:hover {
+    transform: translateY(-5px) scale(1.08);
+    z-index: 30;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.8), 0 0 16px rgba(250, 204, 21, 0.85);
+  }
+  @keyframes active-disc-glow {
+    0% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.35); }
+    100% { box-shadow: 0 0 18px rgba(250, 204, 21, 0.8); }
+  }
+
+  /* MINI PLACEHOLDER SLOTS IN BARS */
+  .disc-slot-placeholder-mini {
+    width: clamp(32px, 2.8vw, 42px);
+    height: clamp(46px, 4.0vw, 60px);
+    border: 1px dashed rgba(250, 204, 21, 0.22);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    user-select: none;
+    pointer-events: none;
+  }
+  .slot-num-mini {
+    font-size: 8px;
+    font-weight: 800;
+    color: rgba(250, 204, 21, 0.35);
   }
 
   /* ======================================================== */
@@ -2091,12 +2080,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- PLAYER 4 (ANDA - HERO CONSOLE) -->
+      <!-- PLAYER 4 (ANDA - HERO CONSOLE WITH CENTER HAND & FLANKING MELDS) -->
       <div id="zone-bottom" class="zone-box player-strip my-strip" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
         <div class="strip-hdr">
           <div style="display:flex;align-items:center;gap:8px;">
             <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:10.5px;padding:2px 8px;">★ GILIRAN ANDA! ★</span>
-            <span id="my-info" class="player-title" style="font-size:12.5px;color:#facc15;">Anda (Player 1)</span>
+            <span id="my-info" class="player-title" style="font-size:12px;color:#facc15;">Anda (Player 1)</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span id="my-step-badge" style="display:none;font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;"></span>
@@ -2105,16 +2094,39 @@ HTML_PAGE = r"""<!DOCTYPE html>
             </span>
           </div>
         </div>
-        <div class="strip-body my-strip-body">
-          <!-- Hand cards on the left -->
-          <div class="strip-hand my-hand-wrapper">
+        <!-- 3 SUB-BOXES: MELDS LEFT, HAND CENTER, MELDS RIGHT -->
+        <div class="my-strip-three-col">
+          <!-- BOX 1: KARTU JADI KIRI (SERI URUT) -->
+          <div class="player-flank-box" id="my-melds-left-box">
+            <div class="flank-box-hdr">
+              <span>🎴 JADI (KIRI)</span>
+              <span style="font-size:7.5px;color:#4ade80;">SERI</span>
+            </div>
+            <div class="flank-melds-content" id="my-melds-left-cards">
+              <div class="meld-empty-hint">Belum ada seri</div>
+            </div>
+          </div>
+
+          <!-- BOX 2: KARTU TANGAN PEMAIN (TENGAH) -->
+          <div class="player-center-hand-box" id="my-center-hand-box">
+            <div class="center-hand-hdr">🃏 TANGAN ANDA</div>
             <div id="my-hand"></div>
           </div>
-          <!-- Melds on the right -->
-          <div class="strip-melds meld-container my-melds-wrapper" id="my-melds">
-            <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
+
+          <!-- BOX 3: KARTU JADI KANAN (TRIO / SET) -->
+          <div class="player-flank-box" id="my-melds-right-box">
+            <div class="flank-box-hdr">
+              <span>🎴 JADI (KANAN)</span>
+              <span style="font-size:7.5px;color:#facc15;">TRIO/SET</span>
+            </div>
+            <div class="flank-melds-content" id="my-melds-right-cards">
+              <div class="meld-empty-hint">Belum ada set</div>
+            </div>
           </div>
         </div>
+
+        <!-- HIDDEN COMPATIBILITY ELEMENT -->
+        <div id="my-melds" style="display:none;"></div>
       </div>
     </div>
 
@@ -2136,7 +2148,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- BOTTOM ROW: TUMPUKAN BUANGAN (DISCARD ARENA) -->
+      <!-- BOTTOM ROW: TUMPUKAN BUANGAN (3 HORIZONTAL BARS DISCARD RACK) -->
       <div id="discard-rail" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
         <div class="disc-header">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -2145,11 +2157,42 @@ HTML_PAGE = r"""<!DOCTYPE html>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span id="disc-count-pill" class="disc-count-pill">0 Kartu</span>
-            <span class="disc-active-hint" style="font-size:9.5px;color:#facc15;font-weight:700;">(7 Teratas Aktif)</span>
+            <span class="disc-active-hint" style="font-size:9px;color:#facc15;font-weight:700;">(7 Teratas Aktif)</span>
           </div>
         </div>
-        <!-- Card rail container for both greyed-out older cards and glowing active 7 cards -->
-        <div id="disc-cards"></div>
+
+        <!-- 3 HORIZONTAL BARS / ROWS AS SKETCHED -->
+        <div id="disc-rows-container">
+          <!-- ROW 1 (TOP BAR: Kartu 1 - 7) -->
+          <div class="disc-bar" id="disc-bar-1">
+            <div class="disc-bar-hdr">
+              <span class="disc-bar-label">BARIS #1</span>
+              <span class="disc-bar-count" id="disc-bar-1-count">0/7</span>
+            </div>
+            <div class="disc-bar-cards" id="disc-bar-1-cards"></div>
+          </div>
+
+          <!-- ROW 2 (MID BAR: Kartu 8 - 14) -->
+          <div class="disc-bar" id="disc-bar-2">
+            <div class="disc-bar-hdr">
+              <span class="disc-bar-label">BARIS #2</span>
+              <span class="disc-bar-count" id="disc-bar-2-count">0/7</span>
+            </div>
+            <div class="disc-bar-cards" id="disc-bar-2-cards"></div>
+          </div>
+
+          <!-- ROW 3 (BOTTOM BAR: Kartu 15 - 21+) -->
+          <div class="disc-bar" id="disc-bar-3">
+            <div class="disc-bar-hdr">
+              <span class="disc-bar-label">BARIS #3</span>
+              <span class="disc-bar-count" id="disc-bar-3-count">0/7</span>
+            </div>
+            <div class="disc-bar-cards" id="disc-bar-3-cards"></div>
+          </div>
+        </div>
+
+        <!-- HIDDEN COMPATIBILITY CONTAINERS -->
+        <div id="disc-cards" style="display:none;"></div>
         <div id="disc-buried-tray" style="display:none;"></div>
       </div>
     </div>
@@ -2768,18 +2811,24 @@ function updateUI(st) {
     }
   }
 
-  // Render Discard Rail (All discards in rail, older cards greyed out, top 7 glowing active)
-  const discContainer = document.getElementById('disc-cards');
+  // Render Discard Rail (3 Horizontal Bars as Sketched: Bar 1, Bar 2, Bar 3)
   const discTitleEl = document.getElementById('disc-title');
   const discCountPill = document.getElementById('disc-count-pill');
-  if (discContainer) {
+  const bar1CardsEl = document.getElementById('disc-bar-1-cards');
+  const bar2CardsEl = document.getElementById('disc-bar-2-cards');
+  const bar3CardsEl = document.getElementById('disc-bar-3-cards');
+  const bar1CountEl = document.getElementById('disc-bar-1-count');
+  const bar2CountEl = document.getElementById('disc-bar-2-count');
+  const bar3CountEl = document.getElementById('disc-bar-3-count');
+
+  if (bar1CardsEl && bar2CardsEl && bar3CardsEl) {
     const totalDisc = discards.length;
     const MAX_ACTIVE = 7;
     const startIdx = Math.max(0, totalDisc - MAX_ACTIVE);
     const buriedCount = startIdx;
 
     if (discTitleEl) {
-      discTitleEl.textContent = 'TUMPUKAN BUANGAN (7 Teratas Aktif):';
+      discTitleEl.textContent = 'TUMPUKAN BUANGAN:';
     }
     if (discCountPill) {
       discCountPill.textContent = `${totalDisc} Kartu${buriedCount > 0 ? ` (${buriedCount} Terkubur)` : ''}`;
@@ -2789,15 +2838,9 @@ function updateUI(st) {
     if (discSig !== lastDiscSig) {
       lastDiscSig = discSig;
 
-      let railHtml = '';
-
-      // 1. Render all discarded cards in order (from oldest to newest)
-      for (let i = 0; i < totalDisc; i++) {
-        const c = discards[i];
-        const isActive = (i >= startIdx); // True if within top 7
-
+      const renderCardInBar = (c, i) => {
+        const isActive = (i >= startIdx);
         if (isActive) {
-          // Top 7 active card (GLOWING / MENYALA)
           const revIdx = (totalDisc - 1) - i; // 0 for newest (rightmost)
           const sliceToRight = discards.slice(i);
           const blockedByWild = sliceToRight.some(x => x.is_wild || x.rank === 'JOKER');
@@ -2805,7 +2848,7 @@ function updateUI(st) {
           const badgeText = isWildSelf ? 'WILD MATI' : (blockedByWild ? 'TERKUNCI' : `AMBIL #${revIdx + 1}`);
           const canClick = isMyTurn && (st.phase === 'TURN_DRAW') && !blockedByWild;
 
-          railHtml += renderCardHTML(c, {
+          return renderCardHTML(c, {
             badge: badgeText,
             locked: blockedByWild,
             onclick: canClick ? `takeDiscard(${i})` : '',
@@ -2815,37 +2858,72 @@ function updateUI(st) {
             hint: blockedByWild
               ? `Tidak bisa diambil karena terhalang / merupakan Wild Card buangan`
               : `Ambil kartu #${revIdx + 1} (${c.rank}${c.suit}) & kartu sesudahnya (Otomatis Jadi)! Klik atau tarik ke meja Anda`
-          }).replace('class="card', 'class="card active-discard');
+          }).replace('class="card', 'class="card active-discard disc-bar-card');
         } else {
-          // Older card beyond 7 (GREYED OUT)
-          railHtml += renderCardHTML(c, {
+          return renderCardHTML(c, {
             locked: true,
             hint: `Kartu buangan lama #${i + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif (Tidak dapat diambil)`
-          }).replace('class="card', 'class="card buried-grey');
+          }).replace('class="card', 'class="card buried-grey disc-bar-card');
         }
+      };
+
+      const renderSlotPlaceholder = (slotNum) => {
+        return `<div class="disc-slot-placeholder-mini" title="Slot #${slotNum} (Kosong)">
+          <span class="slot-num-mini">#${slotNum}</span>
+        </div>`;
+      };
+
+      // Bar 1: cards 0 to 6
+      let b1Html = '';
+      const b1Cards = discards.slice(0, 7);
+      for (let i = 0; i < b1Cards.length; i++) {
+        b1Html += renderCardInBar(b1Cards[i], i);
       }
-
-      // 2. If fewer than 7 cards total, render dashed slot placeholders up to 7
-      if (totalDisc < MAX_ACTIVE) {
-        for (let s = totalDisc; s < MAX_ACTIVE; s++) {
-          const slotNum = s + 1;
-          railHtml += `<div class="disc-slot-placeholder" title="Slot Kartu Buangan #${slotNum} (Kosong)">
-            <span class="disc-slot-num">SLOT #${slotNum}</span>
-            <span class="disc-slot-icon">🂠</span>
-          </div>`;
-        }
+      for (let s = b1Cards.length; s < 7; s++) {
+        b1Html += renderSlotPlaceholder(s + 1);
       }
+      bar1CardsEl.innerHTML = b1Html;
+      if (bar1CountEl) bar1CountEl.textContent = `${b1Cards.length}/7`;
 
-      discContainer.innerHTML = railHtml;
+      // Bar 2: cards 7 to 13
+      let b2Html = '';
+      const b2Cards = discards.slice(7, 14);
+      for (let i = 0; i < b2Cards.length; i++) {
+        b2Html += renderCardInBar(b2Cards[i], 7 + i);
+      }
+      for (let s = b2Cards.length; s < 7; s++) {
+        b2Html += renderSlotPlaceholder(7 + s + 1);
+      }
+      bar2CardsEl.innerHTML = b2Html;
+      if (bar2CountEl) bar2CountEl.textContent = `${b2Cards.length}/7`;
 
-      // Smooth auto-scroll to the right so active cards are always prominently visible
+      // Bar 3: cards 14 onwards
+      let b3Html = '';
+      const b3Cards = discards.slice(14);
+      for (let i = 0; i < b3Cards.length; i++) {
+        b3Html += renderCardInBar(b3Cards[i], 14 + i);
+      }
+      const b3PlaceholderCount = Math.max(0, 7 - b3Cards.length);
+      for (let s = 0; s < b3PlaceholderCount; s++) {
+        b3Html += renderSlotPlaceholder(14 + b3Cards.length + s + 1);
+      }
+      bar3CardsEl.innerHTML = b3Html;
+      if (bar3CountEl) bar3CountEl.textContent = `${b3Cards.length}${b3Cards.length > 7 ? '' : '/7'}`;
+
+      // Smooth auto-scroll the active bar to the right
       requestAnimationFrame(() => {
-        discContainer.scrollLeft = discContainer.scrollWidth;
+        if (totalDisc > 14) {
+          bar3CardsEl.scrollLeft = bar3CardsEl.scrollWidth;
+        } else if (totalDisc > 7) {
+          bar2CardsEl.scrollLeft = bar2CardsEl.scrollWidth;
+        } else if (totalDisc > 0) {
+          bar1CardsEl.scrollLeft = bar1CardsEl.scrollWidth;
+        }
       });
     }
   }
 
-  // Render Opponents (4 PLAYERS VERTICAL STACK ON LEFT COLUMN)
+    // Render Opponents (4 PLAYERS VERTICAL STACK ON LEFT COLUMN)
   const n = st.players.length;
   const isSpec = Boolean(mySeat === null || st.is_spectator || spectatorMode);
   const showOpponentFace = Boolean(isSpec || st.show_bot_hands);
@@ -2907,10 +2985,51 @@ function updateUI(st) {
       }
     }
 
-    const myMeldsEl = document.getElementById('my-melds');
-    if (myMeldsEl) myMeldsEl.innerHTML = renderMeldsHTML(p0.melds, false);
+    // Render Player Melds (Divided between Left Box and Right Box)
+    const myMeldsLeftEl = document.getElementById('my-melds-left-cards');
+    const myMeldsRightEl = document.getElementById('my-melds-right-cards');
+    const oldMyMeldsEl = document.getElementById('my-melds');
 
-    // Indikator Giliran Pemain & Step Badge
+    const pMelds = p0.melds || [];
+    if (oldMyMeldsEl) oldMyMeldsEl.innerHTML = renderMeldsHTML(pMelds, false);
+
+    if (myMeldsLeftEl && myMeldsRightEl) {
+      if (pMelds.length === 0) {
+        myMeldsLeftEl.innerHTML = '<div class="meld-empty-hint">Belum ada seri</div>';
+        myMeldsRightEl.innerHTML = '<div class="meld-empty-hint">Belum ada set</div>';
+      } else {
+        let leftMelds = [];
+        let rightMelds = [];
+
+        pMelds.forEach(m => {
+          // Detect if Seri (same suit) or Set (different suit / same rank)
+          const nonWilds = m.filter(c => !c.is_wild && c.rank !== 'JOKER');
+          const isSeri = (nonWilds.length <= 1) || (new Set(nonWilds.map(c => c.suit)).size === 1);
+          if (isSeri) {
+            if (leftMelds.length === 0) leftMelds.push(m);
+            else rightMelds.push(m);
+          } else {
+            rightMelds.push(m);
+          }
+        });
+
+        // Balance if needed
+        if (leftMelds.length === 0 && rightMelds.length > 1) {
+          leftMelds.push(rightMelds.shift());
+        } else if (rightMelds.length === 0 && leftMelds.length > 1) {
+          rightMelds.push(leftMelds.pop());
+        }
+
+        myMeldsLeftEl.innerHTML = leftMelds.length > 0
+          ? renderMeldsHTML(leftMelds, false)
+          : '<div class="meld-empty-hint">Belum ada seri</div>';
+        myMeldsRightEl.innerHTML = rightMelds.length > 0
+          ? renderMeldsHTML(rightMelds, false)
+          : '<div class="meld-empty-hint">Belum ada set</div>';
+      }
+    }
+
+        // Indikator Giliran Pemain & Step Badge
     const zoneBottom = document.getElementById('zone-bottom');
     if (zoneBottom) {
       if (isMyTurn) zoneBottom.classList.add('my-turn-active');
@@ -3524,10 +3643,14 @@ function enableDragScroll(el) {
   });
 }
 window.addEventListener('DOMContentLoaded', () => {
-  enableDragScroll(document.getElementById('disc-cards'));
+  enableDragScroll(document.getElementById('disc-bar-1-cards'));
+enableDragScroll(document.getElementById('disc-bar-2-cards'));
+enableDragScroll(document.getElementById('disc-bar-3-cards'));
   enableDragScroll(document.getElementById('my-hand'));
 });
-enableDragScroll(document.getElementById('disc-cards'));
+enableDragScroll(document.getElementById('disc-bar-1-cards'));
+enableDragScroll(document.getElementById('disc-bar-2-cards'));
+enableDragScroll(document.getElementById('disc-bar-3-cards'));
 enableDragScroll(document.getElementById('my-hand'));
 
 function onHandDragOver(e) {
