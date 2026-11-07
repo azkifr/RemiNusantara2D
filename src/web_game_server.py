@@ -7,6 +7,7 @@ import http.server
 from http.server import HTTPServer, BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 import json
+import gzip
 import os
 import sys
 import threading
@@ -2549,6 +2550,40 @@ function updateUI(st) {
     }
   }
 
+  if (bannerEl) {
+    if (isPaused) {
+      bannerEl.className = 'turn-banner turn-opp';
+      bannerEl.textContent = '⏸️ PERMAINAN DIHENTIKAN SEMENTARA (PAUSED) - TEKAN ESC UNTUK LANJUT ⏸️';
+    } else if (st.phase === 'LOBBY') {
+      bannerEl.className = 'turn-banner turn-my';
+      bannerEl.textContent = '🎲 RUANG LOBBY: PILIH KURSI ATAU ATUR ATURAN, LALU KLIK MULAI PERMAINAN 🎲';
+    } else if (st.phase === 'MATCH_OVER' || st.phase === 'GAME_OVER') {
+      bannerEl.className = 'turn-banner turn-my';
+      bannerEl.textContent = '🏆 PERMAINAN SELESAI! JUARA TARGET SKOR TELAH DITENTUKAN! 🏆';
+    } else if (st.phase === 'ROUND_OVER') {
+      bannerEl.className = 'turn-banner turn-opp';
+      bannerEl.textContent = `🏁 RONDE ${st.round_number} SELESAI! Mempersiapkan ronde berikutnya...`;
+    } else if (isMyTurn) {
+      bannerEl.className = 'turn-banner turn-my';
+      if (st.phase === 'TURN_DRAW') {
+        bannerEl.textContent = '★ GILIRAN ANDA! [TAHAP 1: AMBIL KARTU] -> Klik PAK KARTU atau Buangan #1-#7 ★';
+      } else {
+        if (canTutup) {
+          bannerEl.textContent = `★ GILIRAN ANDA! KARTU JADI LENGKAP! KLIK \'TUTUP TANGAN +250 (T)\' (Buang ${tutupCardId})! ★`;
+        } else if (canCloseRound) {
+          bannerEl.textContent = `★ GILIRAN ANDA! BISA TUTUP KARTU! KLIK \'TUTUP KARTU (T)\' (Buang ${closeCardId})! ★`;
+        } else {
+          bannerEl.textContent = "★ GILIRAN ANDA! [TAHAP 2: SUSUN / BUANG] -> Klik \'AUTO TURUN (A)\', \'TURUNKAN (M)\', atau \'BUANG (B)\' ★";
+        }
+      }
+    } else {
+      bannerEl.className = 'turn-banner turn-opp';
+      const currP = (st.players && st.players[st.current_turn_seat]) ? st.players[st.current_turn_seat] : null;
+      const currName = currP ? currP.name : `Pemain ${st.current_turn_seat + 1}`;
+      bannerEl.textContent = `Giliran ${currName} sedang berjalan... Harap tunggu.`;
+    }
+  }
+
   // Render Winner & Next Round Modal saat Ronde / Game Berakhir
   const winnerModal = document.getElementById('winner-modal');
   if (winnerModal) {
@@ -2986,7 +3021,12 @@ async function sendAction(action, data = {}) {
       body: JSON.stringify(data)
     });
     const st = await res.json();
-    if (st && st.state) updateUI(st.state);
+    if (st && st.state) {
+      lastStateVersion = st.state.state_version || 0;
+      lastStateSeat = mySeat;
+      updateUI(st.state);
+    }
+    wakeUpPollingFast();
     return st;
   } catch (e) {
     console.error("Action error:", e);
@@ -3618,7 +3658,12 @@ async function claimSeat(idx) {
         sessionStorage.removeItem('remi_my_seat');
       }
     }
-    if (data.state) updateUI(data.state);
+    if (data.state) {
+      lastStateVersion = data.state.state_version || 0;
+      lastStateSeat = mySeat;
+      updateUI(data.state);
+    }
+    wakeUpPollingFast();
   } catch (e) {
     console.error("Claim error:", e);
     showToast("⚠️ Gagal menghubungi server. Silakan coba lagi.");
@@ -3643,7 +3688,12 @@ async function leaveSeat(idx) {
     url.searchParams.delete('seat');
     window.history.replaceState({}, '', url);
     showToast(`Anda meninggalkan Kursi ${idx + 1}.`);
-    if (data.state) updateUI(data.state);
+    if (data.state) {
+      lastStateVersion = data.state.state_version || 0;
+      lastStateSeat = mySeat;
+      updateUI(data.state);
+    }
+    wakeUpPollingFast();
   } catch (e) {
     console.error("Leave seat error:", e);
   }
@@ -3985,12 +4035,57 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight' && selectedCards.size > 0) { e.preventDefault(); slideSelectedCard(1); }
 });
 
-// Real-time Polling (Smart Heartbeat dengan Versioning, Anti-Tumpuk Request & Background Throttling)
+// Real-time Polling (Smart Adaptive Heartbeat dengan Versioning, Dynamic Throttling & Fast Wakeup)
 let lastStateVersion = 0;
 let lastStateSeat = null;
 let pollInFlight = false;
+let currentPollIntervalMs = 400;
+let pollTimer = null;
+let consecutiveUnchangedCount = 0;
+
+function computeOptimalPollInterval(st) {
+  if (document.hidden) return 2500;
+  if (!st) return 600;
+  if (st.is_paused) return 1500;
+  if (st.phase === 'LOBBY') return 1000;
+  if (st.phase === 'ROUND_OVER' || st.phase === 'MATCH_OVER' || st.phase === 'GAME_OVER') return 800;
+
+  const isMyTurn = (mySeat !== null) && (st.current_turn_seat === mySeat) && (st.phase === 'TURN_DRAW' || st.phase === 'TURN_MELD_DISCARD');
+  if (isMyTurn) {
+    return 350; // Respon super cepat saat giliran saya
+  }
+
+  // Saat giliran pemain lain / bot
+  if (consecutiveUnchangedCount > 6) {
+    return 1000; // Meja hening/pemain lain sedang berpikir, hemat kuota
+  }
+  return 700; // Halus & responsif saat giliran lawan, memangkas 50% request
+}
+
+function resetPollSchedule(targetIntervalMs) {
+  if (targetIntervalMs && targetIntervalMs !== currentPollIntervalMs) {
+    currentPollIntervalMs = targetIntervalMs;
+  }
+  if (pollTimer) clearTimeout(pollTimer);
+  pollTimer = setTimeout(pollState, currentPollIntervalMs);
+}
+
+function wakeUpPollingFast() {
+  consecutiveUnchangedCount = 0;
+  currentPollIntervalMs = 350;
+  if (pollTimer) clearTimeout(pollTimer);
+  if (!pollInFlight) {
+    pollState();
+  } else {
+    pollTimer = setTimeout(pollState, 350);
+  }
+}
+
 async function pollState() {
-  if (pollInFlight) return;  // jangan menumpuk request jika server sedang lambat
+  if (pollInFlight) {
+    resetPollSchedule(currentPollIntervalMs);
+    return;
+  }
   pollInFlight = true;
   try {
     const qParams = new URLSearchParams();
@@ -4000,33 +4095,44 @@ async function pollState() {
     const res = await fetch(`/api/state?${qParams.toString()}`, { cache: 'no-store' });
     const data = await res.json();
     if (data.unchanged) {
+      consecutiveUnchangedCount++;
       if (data.time_left !== undefined && latestState) {
         latestState.turn_remaining_sec = data.time_left;
       }
+      const nextInterval = computeOptimalPollInterval(latestState);
+      resetPollSchedule(nextInterval);
       return;
     }
     if (data.state) {
+      consecutiveUnchangedCount = 0;
       lastStateVersion = data.state.state_version || 0;
       lastStateSeat = mySeat;
       updateUI(data.state);
+      const nextInterval = computeOptimalPollInterval(data.state);
+      resetPollSchedule(nextInterval);
     }
   } catch (e) {
+    resetPollSchedule(1000);
   } finally {
     pollInFlight = false;
   }
 }
+
 pollState();
-let pollIntervalMs = 400;
-let pollTimer = setInterval(pollState, pollIntervalMs);
+
 document.addEventListener('visibilitychange', () => {
-  clearInterval(pollTimer);
-  pollIntervalMs = document.hidden ? 2500 : 400;
-  pollTimer = setInterval(pollState, pollIntervalMs);
-  if (!document.hidden) pollState();
+  if (document.hidden) {
+    resetPollSchedule(2500);
+  } else {
+    wakeUpPollingFast();
+  }
 });
 </script>
 </body>
 </html>"""
+
+HTML_PAGE_BYTES = HTML_PAGE.encode("utf-8")
+HTML_PAGE_GZIPPED = gzip.compress(HTML_PAGE_BYTES, compresslevel=6)
 
 def _format_state_dict(seat: Optional[int]) -> dict:
     is_spec = (seat is None or not (0 <= seat < len(GAME.players)))
@@ -4045,6 +4151,7 @@ def _format_state_dict(seat: Optional[int]) -> dict:
         st["latest_ceki"] = latest_ceki
     else:
         st["latest_ceki"] = None
+    st["state_version"] = GAME.compute_view_signature()
     return st
 
 
@@ -4068,7 +4175,7 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "video/mp4")
                     self.send_header("Content-Length", str(len(content)))
                     self.send_header("Accept-Ranges", "bytes")
-                    self.send_header("Cache-Control", "public, max-age=86400")
+                    self.send_header("Cache-Control", "public, max-age=604800, immutable")
                     self.end_headers()
                     self.wfile.write(content)
                 except Exception:
@@ -4138,10 +4245,22 @@ class RemiWebHandler(BaseHTTPRequestHandler):
             self._send_json(cfg)
             return
 
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(HTML_PAGE.encode("utf-8"))
+        accept_enc = self.headers.get("Accept-Encoding", "")
+        if "gzip" in accept_enc:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Content-Length", str(len(HTML_PAGE_GZIPPED)))
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+            self.end_headers()
+            self.wfile.write(HTML_PAGE_GZIPPED)
+        else:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(HTML_PAGE_BYTES)))
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+            self.end_headers()
+            self.wfile.write(HTML_PAGE_BYTES)
 
     def do_POST(self):
         parsed = urlparse(self.path)
@@ -4348,14 +4467,24 @@ class RemiWebHandler(BaseHTTPRequestHandler):
 
         self._send_json({"state": st})
 
-    def _send_json(self, obj: dict):
+    def _send_json(self, obj: dict, status: int = 200, extra_headers: Optional[dict] = None):
         try:
             data = json.dumps(obj).encode("utf-8")
-            self.send_response(200)
+            accept_enc = self.headers.get("Accept-Encoding", "")
+            can_gzip = "gzip" in accept_enc and len(data) > 180
+            payload = gzip.compress(data, compresslevel=6) if can_gzip else data
+
+            self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Content-Length", str(len(payload)))
+            if can_gzip:
+                self.send_header("Content-Encoding", "gzip")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            if extra_headers:
+                for k, v in extra_headers.items():
+                    self.send_header(k, v)
             self.end_headers()
-            self.wfile.write(data)
+            self.wfile.write(payload)
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
             pass
 
