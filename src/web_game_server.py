@@ -140,21 +140,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex-direction: column;
   }
 
-  /* MEJA PERMAINAN ROYALE */
+  /* MEJA PERMAINAN ROYALE - 2 ATAS 2 BAWAH ARCHITECTURE */
   #table {
     flex: 1;
     margin: 4px 8px;
     border: 7px solid var(--wood-rail);
-    border-radius: 20px;
-    box-shadow: inset 0 0 50px rgba(0,0,0,0.85), 0 10px 30px rgba(0,0,0,0.9);
+    border-radius: 22px;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.85), 0 10px 30px rgba(0,0,0,0.9);
     outline: 1.5px solid rgba(250, 204, 21, 0.25);
     outline-offset: -4px;
-    background: radial-gradient(ellipse at 50% 48%, var(--felt-center) 0%, var(--felt-mid) 52%, var(--felt-dark) 100%);
-    display: grid;
-    grid-template-columns: minmax(180px, 230px) 1fr minmax(180px, 230px);
-    grid-template-rows: auto auto 1fr auto auto;
-    gap: 4px 8px;
-    padding: 6px 10px 8px 10px;
+    background: radial-gradient(ellipse at 50% 50%, var(--felt-center) 0%, var(--felt-mid) 54%, var(--felt-dark) 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px 14px 6px 14px;
     position: relative;
     min-height: 94vh;
     max-height: calc(100vh - 8px);
@@ -276,59 +275,115 @@ HTML_PAGE = r"""<!DOCTYPE html>
     box-shadow: 0 0 16px rgba(250, 204, 21, 0.35), inset 0 0 10px rgba(250, 204, 21, 0.15);
   }
 
-  /* OPPONENT: TOP (Bot Siti) */
-  #zone-top {
-    grid-column: 2 / 3;
-    grid-row: 2 / 3;
-    padding: 4px 10px;
-    gap: 3px;
+  /* ======================================================== */
+  /* 2 ATAS 2 BAWAH ARCHITECTURE (FULL-WIDTH DISCARD RAIL)   */
+  /* ======================================================== */
+
+  /* TOP ROW: 2 OPPONENTS */
+  #opponents-top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    flex-shrink: 0;
   }
 
-  /* OPPONENT: LEFT (Bot Budi) */
-  #zone-left {
-    grid-column: 1 / 2;
-    grid-row: 2 / 5;
-    justify-content: flex-start;
+  .opp-pod {
+    background: rgba(3, 24, 14, 0.82);
+    backdrop-filter: blur(14px);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 6px 12px;
+    display: flex;
+    flex-direction: column;
     gap: 4px;
-    padding: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+    position: relative;
+    overflow: visible;
+    transition: all 0.22s ease;
   }
-
-  /* OPPONENT: RIGHT (Bot Agus) */
-  #zone-right {
-    grid-column: 3 / 4;
-    grid-row: 2 / 5;
-    justify-content: flex-start;
+  .opp-pod-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .opp-melds-label {
+    font-size: 10px;
+    color: #fde047;
+    font-weight: 700;
+  }
+  .opp-pod-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+  }
+  .opp-pod .cards-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .opp-pod .meld-container {
+    flex: 1;
+    min-width: 0;
+    max-height: 52px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: 4px;
-    padding: 6px;
   }
 
-  /* CENTER AREA (HERO: Pak Kartu + Wild + BIG DISCARD RAIL) */
+  /* CENTER ARENA: FULL-WIDTH ROYALE FELT */
   #zone-center {
-    grid-column: 2 / 3;
-    grid-row: 3 / 4;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 14px;
     padding: 4px 0;
-    min-height: 155px;
+    width: 100%;
+    flex: 1;
+    min-height: 175px;
   }
 
-  /* PLAYER AREA (Anda / Player 1) */
+  /* BOTTOM ROW: 2 PLAYERS (Opponent 3 + Player 1) */
+  #players-bottom-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 310px) 1fr;
+    gap: 10px;
+    width: 100%;
+    align-items: stretch;
+    flex-shrink: 0;
+  }
+  .opp-pod-bottom {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* PLAYER 1 (ANDA) */
   #zone-bottom {
-    grid-column: 2 / 3;
-    grid-row: 4 / 5;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    padding: 6px 12px 4px 12px;
-    background: rgba(4, 26, 16, 0.88);
+    padding: 6px 14px 4px 14px;
+    background: rgba(3, 24, 15, 0.88);
+    backdrop-filter: blur(14px);
     border: 1.5px solid rgba(250, 204, 21, 0.4);
-    border-radius: 14px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.45);
     position: relative;
     transition: all 0.25s ease;
+    width: 100%;
   }
   /* PROMINENT PLAYER TURN HIGHLIGHT: BORDER GOLD PULSE */
   #zone-bottom.my-turn-active {
@@ -646,17 +701,17 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
   .disc-slot-placeholder {
     width: 100%;
-    max-width: 68px;
-    height: clamp(88px, 6.8vw, 106px);
-    border: 1.5px dashed rgba(250, 204, 21, 0.22);
-    border-radius: 9px;
-    background: rgba(0, 0, 0, 0.22);
+    max-width: 90px;
+    height: clamp(98px, 7.8vw, 126px);
+    border: 1.5px dashed rgba(250, 204, 21, 0.25);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.24);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    color: rgba(250, 204, 21, 0.35);
+    gap: 3px;
+    color: rgba(250, 204, 21, 0.4);
     user-select: none;
     pointer-events: none;
     transition: all 0.15s ease;
@@ -677,12 +732,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     color: #fca5a5 !important;
   }
 
-  /* ACTIVE DISCARD CARDS IN STATIC SLOTS */
+  /* ACTIVE DISCARD CARDS IN STATIC SLOTS (EXPANDED FOR FULL-WIDTH CENTER) */
   #disc-cards .card {
     width: 100%;
-    max-width: 68px;
-    min-width: 44px;
-    height: clamp(88px, 6.8vw, 106px);
+    max-width: 90px;
+    min-width: 50px;
+    height: clamp(98px, 7.8vw, 126px);
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
@@ -1990,43 +2045,55 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <div id="hdr-status" class="status-notif" style="display:none;"></div>
   </div>
 
-  <!-- OPPONENT: TOP (Bot Siti) -->
-  <div id="zone-top" class="zone-box">
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:3px;">
-      <div class="player-title" id="top-title" style="text-align:center;">Bot Siti</div>
-      <div class="cards-row opp-cards" id="top-cards" style="justify-content:center;"></div>
+  <!-- TOP OPPONENTS ROW (2 PLAYERS: zone-top-left & zone-top-right) -->
+  <div id="opponents-top-row">
+    <!-- OPPONENT 1: TOP LEFT -->
+    <div id="zone-top-left" class="zone-box opp-pod">
+      <div class="opp-pod-hdr">
+        <div class="player-title" id="top-left-title">Bot Siti</div>
+        <div id="top-left-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+      </div>
+      <div class="opp-pod-content">
+        <div class="cards-row opp-cards" id="top-left-cards"></div>
+        <div class="meld-container opp-melds" id="top-left-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
+      </div>
     </div>
-    <div id="top-melds-label" style="font-size:10px;color:#fde047;font-weight:700;margin-top:2px;">Kartu Jadi:</div>
-    <div class="meld-container" id="top-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
+
+    <!-- OPPONENT 2: TOP RIGHT -->
+    <div id="zone-top-right" class="zone-box opp-pod">
+      <div class="opp-pod-hdr">
+        <div class="player-title" id="top-right-title">Bot Agus</div>
+        <div id="top-right-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+      </div>
+      <div class="opp-pod-content">
+        <div class="cards-row opp-cards" id="top-right-cards"></div>
+        <div class="meld-container opp-melds" id="top-right-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
+      </div>
+    </div>
   </div>
 
-  <!-- OPPONENT: LEFT (Bot Budi) -->
-  <div id="zone-left" class="zone-box">
-    <div class="player-title" id="left-title">Bot Budi</div>
-    <div class="cards-row opp-cards" id="left-cards"></div>
-    <div id="left-melds-label" style="font-size:10px;color:#fde047;font-weight:700;margin-top:4px;">Kartu Jadi:</div>
-    <div class="meld-container" id="left-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
-  </div>
-
-  <!-- CENTER AREA: THE ARENA (Pak Kartu + Wild + BIG DISCARD RAIL) -->
+  <!-- CENTER AREA: THE ROYALE FELT (FULL WIDTH SPAN) -->
   <div id="zone-center">
     <!-- PAK KARTU -->
-    <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu">
-      <div style="font-weight:900;color:#fde047;font-size:11px;letter-spacing:0.5px;">PAK KARTU</div>
-      <div id="pak-count" style="font-size:22px;font-weight:900;margin:3px 0;font-variant-numeric:tabular-nums;">(24)</div>
-      <div style="font-size:8.5px;color:#cbd5e1;opacity:0.85;">KLIK / TARIK</div>
+    <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu (D)">
+      <div class="pak-label">PAK KARTU</div>
+      <div id="pak-count" class="pak-count">(24)</div>
+      <div class="pak-hint">KLIK / TARIK (D)</div>
     </div>
 
     <!-- BUKAAN WILD -->
     <div id="wild-box">
-      <div id="wild-title" style="font-weight:900;color:#e9d5ff;font-size:10px;text-align:center;margin-bottom:2px;letter-spacing:0.3px;">BUKAAN WILD</div>
+      <div id="wild-title" class="wild-title">BUKAAN WILD</div>
       <div id="wild-card-slot"></div>
     </div>
 
-    <!-- PROMINENT STATIC DISCARD RAIL WITH BURIED TRAY ON TOP -->
+    <!-- PROMINENT WIDE DISCARD RAIL (7 SLOTS + BURIED TRAY) -->
     <div id="discard-rail" ondragover="onDiscardDragOver(event)" ondragleave="onDiscardDragLeave(event)" ondrop="onDiscardDrop(event)">
       <div class="disc-header">
-        <span id="disc-title" class="disc-title">TUMPUKAN BUANGAN (7 Teratas Aktif):</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="disc-header-icon">🎴</span>
+          <span id="disc-title" class="disc-title">TUMPUKAN BUANGAN (7 Teratas Aktif):</span>
+        </div>
         <span id="disc-count-pill" class="disc-count-pill">0 Kartu</span>
       </div>
       <!-- TRAY KARTU KECIL DI ATAS PLACE HOLDER KARTU BUANGAN -->
@@ -2038,36 +2105,43 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- OPPONENT: RIGHT (Bot Agus) -->
-  <div id="zone-right" class="zone-box">
-    <div class="player-title" id="right-title">Bot Agus</div>
-    <div class="cards-row opp-cards" id="right-cards"></div>
-    <div id="right-melds-label" style="font-size:10px;color:#fde047;font-weight:700;margin-top:4px;">Kartu Jadi:</div>
-    <div class="meld-container" id="right-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
-  </div>
-
-  <!-- PLAYER ZONE (Anda / Player 1) -->
-  <div id="zone-bottom" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 6px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:11px;padding:3px 10px;">★ GILIRAN ANDA! ★</span>
-        <span id="my-info" class="player-title" style="font-size:13px;color:#facc15;">Anda (Player 1)</span>
+  <!-- BOTTOM PLAYERS ROW (2 PLAYERS: zone-bottom-left & zone-bottom) -->
+  <div id="players-bottom-row">
+    <!-- OPPONENT 3: BOTTOM LEFT -->
+    <div id="zone-bottom-left" class="zone-box opp-pod opp-pod-bottom">
+      <div class="opp-pod-hdr">
+        <div class="player-title" id="bottom-left-title">Bot Budi</div>
+        <div id="bottom-left-melds-label" class="opp-melds-label">Kartu Jadi:</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="my-step-badge" style="display:none;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;"></span>
-        <span id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
-          BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
-        </span>
+      <div class="opp-pod-content">
+        <div class="cards-row opp-cards" id="bottom-left-cards"></div>
+        <div class="meld-container opp-melds" id="bottom-left-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
       </div>
     </div>
 
-    <!-- PLAYER MELDS -->
-    <div id="my-melds" class="meld-container" style="width:100%;">
-      <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
-    </div>
+    <!-- PLAYER 1 (ANDA): BOTTOM RIGHT / MAIN -->
+    <div id="zone-bottom" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 6px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:11px;padding:3px 10px;">★ GILIRAN ANDA! ★</span>
+          <span id="my-info" class="player-title" style="font-size:13px;color:#facc15;">Anda (Player 1)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="my-step-badge" style="display:none;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;"></span>
+          <span id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
+            BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
+          </span>
+        </div>
+      </div>
 
-    <!-- PLAYER HAND (50% OVERLAPPING FAN) -->
-    <div id="my-hand"></div>
+      <!-- PLAYER MELDS -->
+      <div id="my-melds" class="meld-container" style="width:100%;">
+        <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
+      </div>
+
+      <!-- PLAYER HAND (50% OVERLAPPING FAN) -->
+      <div id="my-hand"></div>
+    </div>
   </div>
 
   <!-- ACTION DOCK (ALWAYS 100% VISIBLE & ACCESSIBLE!) -->
@@ -2761,25 +2835,36 @@ function updateUI(st) {
     }
   }
 
-  // Render Opponents
+  // Render Opponents (2 ATAS 2 BAWAH ARCHITECTURE)
   const n = st.players.length;
   const isSpec = Boolean(mySeat === null || st.is_spectator || spectatorMode);
   const showOpponentFace = Boolean(isSpec || st.show_bot_hands);
+  const zTopLeft = document.getElementById('zone-top-left');
+  const zTopRight = document.getElementById('zone-top-right');
+  const zBottomLeft = document.getElementById('zone-bottom-left');
+  const playersBottomRow = document.getElementById('players-bottom-row');
+
   if (n === 2) {
-    renderOpponentZone('top', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
-    document.getElementById('zone-left').style.display = 'none';
-    document.getElementById('zone-right').style.display = 'none';
+    if (zTopLeft) zTopLeft.style.display = 'flex';
+    if (zTopRight) zTopRight.style.display = 'none';
+    if (zBottomLeft) zBottomLeft.style.display = 'none';
+    if (playersBottomRow) playersBottomRow.style.gridTemplateColumns = '1fr';
+    renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
   } else if (n === 3) {
-    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
-    document.getElementById('zone-left').style.display = 'flex';
-    document.getElementById('zone-right').style.display = 'none';
+    if (zTopLeft) zTopLeft.style.display = 'flex';
+    if (zTopRight) zTopRight.style.display = 'flex';
+    if (zBottomLeft) zBottomLeft.style.display = 'none';
+    if (playersBottomRow) playersBottomRow.style.gridTemplateColumns = '1fr';
+    renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top-right', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
   } else {
-    document.getElementById('zone-left').style.display = 'flex';
-    document.getElementById('zone-right').style.display = 'flex';
-    renderOpponentZone('left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('top', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('right', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
+    if (zTopLeft) zTopLeft.style.display = 'flex';
+    if (zTopRight) zTopRight.style.display = 'flex';
+    if (zBottomLeft) zBottomLeft.style.display = 'flex';
+    if (playersBottomRow) playersBottomRow.style.gridTemplateColumns = 'minmax(240px, 310px) 1fr';
+    renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top-right', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('bottom-left', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
   }
 
   // Render Player Zone
@@ -3118,14 +3203,14 @@ function getZoneElementForSeat(seat) {
   }
   const n = (latestState && latestState.players) ? latestState.players.length : 4;
   if (n === 2) {
-    if (seat === (active + 1) % n) return document.getElementById('zone-top');
+    if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
   } else if (n === 3) {
-    if (seat === (active + 1) % n) return document.getElementById('zone-left');
-    if (seat === (active + 2) % n) return document.getElementById('zone-top');
+    if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
+    if (seat === (active + 2) % n) return document.getElementById('zone-top-right');
   } else {
-    if (seat === (active + 1) % n) return document.getElementById('zone-left');
-    if (seat === (active + 2) % n) return document.getElementById('zone-top');
-    if (seat === (active + 3) % n) return document.getElementById('zone-right');
+    if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
+    if (seat === (active + 2) % n) return document.getElementById('zone-top-right');
+    if (seat === (active + 3) % n) return document.getElementById('zone-bottom-left');
   }
   return document.getElementById('zone-bottom');
 }
