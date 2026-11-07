@@ -118,12 +118,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     --gold: #facc15;
     --gold-glow: rgba(250, 204, 21, 0.45);
     /* Large, High-Legibility Card Dimensions */
-    --hand-card-w: clamp(100px, 7.8vw, 114px);
-    --hand-card-h: clamp(146px, 11.4vw, 166px);
-    --disc-card-w: clamp(74px, 5.8vw, 84px);
-    --disc-card-h: clamp(108px, 8.4vw, 122px);
-    --meld-card-w: clamp(52px, 4vw, 60px);
-    --meld-card-h: clamp(74px, 5.8vw, 84px);
+    --hand-card-w: clamp(86px, 7.5vw, 112px);
+    --hand-card-h: clamp(126px, 11vw, 164px);
+    --disc-card-w: clamp(66px, 5.5vw, 84px);
+    --disc-card-h: clamp(96px, 8vw, 122px);
+    --meld-card-w: clamp(44px, 3.8vw, 56px);
+    --meld-card-h: clamp(64px, 5.5vw, 82px);
   }
 
   * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
@@ -153,7 +153,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    gap: 8px;
+    gap: 4px;
     padding: 6px 14px 6px 14px;
     position: relative;
     height: calc(100vh - 8px);
@@ -510,7 +510,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* PAK KARTU (Draw Deck 3D) */
   #pak-box {
     width: clamp(82px, 6.6vw, 98px);
-    height: clamp(140px, 24vh, 185px);
+    height: clamp(140px, 23vh, 180px);
     background: radial-gradient(circle at 40% 30%, #991b1b 0%, #450a0a 100%);
     border: 2px solid #fbbf24;
     border-radius: 12px;
@@ -549,7 +549,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: center;
     width: clamp(82px, 6.6vw, 98px);
-    height: clamp(140px, 24vh, 185px);
+    height: clamp(140px, 23vh, 180px);
     box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 14px rgba(192, 132, 252, 0.3);
     flex-shrink: 0;
   }
@@ -575,7 +575,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex: 1;
     min-width: 0;
     max-width: none;
-    height: clamp(140px, 24vh, 185px);
+    height: clamp(140px, 23vh, 180px);
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -615,10 +615,10 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    height: 38px;
-    min-height: 38px;
-    max-height: 38px;
-    margin-bottom: 5px;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    margin-bottom: 3px;
     padding: 2px 8px;
     background: rgba(0, 0, 0, 0.42);
     border-radius: 8px;
@@ -680,13 +680,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: none;
   }
 
-  /* STATIC PLACE HOLDER KARTU BUANGAN (7 FIXED SLOTS GRID) */
+  /* STATIC PLACE HOLDER KARTU BUANGAN (7 FIXED SLOTS GRID - PERFECT PORTRAIT RATIO) */
   #disc-cards {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 8px;
     align-items: center;
-    justify-content: center;
+    justify-items: center;
     width: 100%;
     flex: 1;
     padding: 2px 0;
@@ -694,12 +694,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
     overflow: hidden;
   }
   .disc-slot-placeholder {
-    width: 100%;
-    max-width: none;
-    height: clamp(86px, 14vh, 118px);
+    width: var(--disc-card-w);
+    height: var(--disc-card-h);
+    max-width: 86px;
+    max-height: 124px;
     border: 1.5px dashed rgba(250, 204, 21, 0.3);
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.28);
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -717,26 +718,27 @@ HTML_PAGE = r"""<!DOCTYPE html>
     letter-spacing: 0.5px;
   }
   .disc-slot-icon {
-    font-size: 17px;
+    font-size: 16px;
     opacity: 0.35;
   }
   .drop-target-discard .disc-slot-placeholder {
     border-color: #f87171 !important;
-    background: rgba(248, 113, 113, 0.12) !important;
+    background: rgba(248, 113, 113, 0.15) !important;
     color: #fca5a5 !important;
   }
 
-  /* ACTIVE DISCARD CARDS IN STATIC SLOTS (EXPANDED FOR FULL-WIDTH CENTER) */
+  /* ACTIVE DISCARD CARDS IN STATIC SLOTS (TRUE PORTRAIT RATIO & CRISP PRESENTATION) */
   #disc-cards .card {
-    width: 100%;
-    max-width: none;
-    min-width: 48px;
-    height: clamp(86px, 14vh, 118px);
+    width: var(--disc-card-w);
+    height: var(--disc-card-h);
+    max-width: 86px;
+    max-height: 124px;
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
     cursor: grab;
     margin: 0 auto;
+    border-radius: 9px;
   }
   #disc-cards .card:active {
     cursor: grabbing;
