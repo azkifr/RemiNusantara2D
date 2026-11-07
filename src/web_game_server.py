@@ -278,26 +278,27 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* 2 ATAS 2 BAWAH ARCHITECTURE (FULL-WIDTH DISCARD RAIL)   */
   /* ======================================================== */
 
-  /* TOP ROW: 2 OPPONENTS */
+  /* TOP ROW: 3 OPPONENTS ACROSS THE TABLE (CASINO ROYALE STADIUM) */
   #opponents-top-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
     width: 100%;
-    flex: 0 0 clamp(76px, 13vh, 94px);
+    flex: 0 0 clamp(74px, 12.5vh, 92px);
     box-sizing: border-box;
   }
 
   .opp-pod {
-    background: rgba(3, 24, 14, 0.82);
+    background: linear-gradient(135deg, rgba(3, 24, 14, 0.88) 0%, rgba(2, 16, 9, 0.94) 100%);
     backdrop-filter: blur(14px);
-    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(250, 204, 21, 0.22);
     border-radius: 14px;
     padding: 6px 12px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+    justify-content: space-between;
+    gap: 3px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
     position: relative;
     overflow: visible;
     transition: all 0.22s ease;
@@ -307,11 +308,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding-bottom: 3px;
+    padding-bottom: 2px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .opp-melds-label {
-    font-size: 10px;
+    font-size: 9.5px;
     color: #fde047;
     font-weight: 700;
   }
@@ -319,20 +320,21 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    min-height: 48px;
+    flex: 1;
+    min-height: 40px;
   }
   .opp-pod .cards-row {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 0;
     flex-shrink: 0;
   }
   .opp-pod .meld-container {
     flex: 1;
     min-width: 0;
-    max-height: 52px;
+    max-height: 48px;
     overflow-x: auto;
     overflow-y: hidden;
     display: flex;
@@ -353,45 +355,28 @@ HTML_PAGE = r"""<!DOCTYPE html>
     padding: 2px 0;
     width: 100%;
     flex: 1 1 auto;
-    min-height: clamp(145px, 26vh, 200px);
-    max-height: 220px;
+    min-height: clamp(140px, 25vh, 195px);
+    max-height: 215px;
     box-sizing: border-box;
   }
 
-  /* BOTTOM ROW: 2 PLAYERS (Opponent 3 + Player 1) */
-  #players-bottom-row {
-    display: grid;
-    grid-template-columns: minmax(250px, 320px) 1fr;
-    gap: 12px;
-    width: 100%;
-    align-items: stretch;
-    flex: 0 0 clamp(185px, 31vh, 245px);
-    box-sizing: border-box;
-  }
-  .opp-pod-bottom {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-
-  /* PLAYER 1 (ANDA) */
+  /* PLAYER 1 (ANDA - FULL WIDTH HERO CONSOLE ACROSS THE BOTTOM) */
   #zone-bottom {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
     gap: 3px;
-    padding: 6px 14px 4px 14px;
-    background: rgba(3, 24, 15, 0.88);
-    backdrop-filter: blur(14px);
+    padding: 6px 16px 4px 16px;
+    background: linear-gradient(135deg, rgba(3, 24, 15, 0.9) 0%, rgba(2, 16, 10, 0.96) 100%);
+    backdrop-filter: blur(16px);
     border: 1.5px solid rgba(250, 204, 21, 0.4);
     border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.45);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
     position: relative;
     transition: all 0.25s ease;
     width: 100%;
-    height: 100%;
+    flex: 0 0 clamp(180px, 30vh, 235px);
     box-sizing: border-box;
   }
   /* PROMINENT PLAYER TURN HIGHLIGHT: BORDER GOLD PULSE */
@@ -2072,12 +2057,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <div id="hdr-status" class="status-notif" style="display:none;"></div>
   </div>
 
-  <!-- TOP OPPONENTS ROW (2 PLAYERS: zone-top-left & zone-top-right) -->
+  <!-- TOP OPPONENTS ROW (3 PLAYERS ACROSS THE TABLE) -->
   <div id="opponents-top-row">
     <!-- OPPONENT 1: TOP LEFT -->
     <div id="zone-top-left" class="zone-box opp-pod">
       <div class="opp-pod-hdr">
-        <div class="player-title" id="top-left-title">Bot Siti</div>
+        <div class="player-title" id="top-left-title">Bot Budi</div>
         <div id="top-left-melds-label" class="opp-melds-label">Kartu Jadi:</div>
       </div>
       <div class="opp-pod-content">
@@ -2086,7 +2071,19 @@ HTML_PAGE = r"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- OPPONENT 2: TOP RIGHT -->
+    <!-- OPPONENT 2: TOP MID -->
+    <div id="zone-top-mid" class="zone-box opp-pod">
+      <div class="opp-pod-hdr">
+        <div class="player-title" id="top-mid-title">Bot Siti</div>
+        <div id="top-mid-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+      </div>
+      <div class="opp-pod-content">
+        <div class="cards-row opp-cards" id="top-mid-cards"></div>
+        <div class="meld-container opp-melds" id="top-mid-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
+      </div>
+    </div>
+
+    <!-- OPPONENT 3: TOP RIGHT -->
     <div id="zone-top-right" class="zone-box opp-pod">
       <div class="opp-pod-hdr">
         <div class="player-title" id="top-right-title">Bot Agus</div>
@@ -2132,43 +2129,28 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- BOTTOM PLAYERS ROW (2 PLAYERS: zone-bottom-left & zone-bottom) -->
-  <div id="players-bottom-row">
-    <!-- OPPONENT 3: BOTTOM LEFT -->
-    <div id="zone-bottom-left" class="zone-box opp-pod opp-pod-bottom">
-      <div class="opp-pod-hdr">
-        <div class="player-title" id="bottom-left-title">Bot Budi</div>
-        <div id="bottom-left-melds-label" class="opp-melds-label">Kartu Jadi:</div>
+  <!-- PLAYER 1 (ANDA): FULL-WIDTH HERO CONSOLE ACROSS THE BOTTOM -->
+  <div id="zone-bottom" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:11px;padding:3px 10px;">★ GILIRAN ANDA! ★</span>
+        <span id="my-info" class="player-title" style="font-size:13px;color:#facc15;">Anda (Player 1)</span>
       </div>
-      <div class="opp-pod-content">
-        <div class="cards-row opp-cards" id="bottom-left-cards"></div>
-        <div class="meld-container opp-melds" id="bottom-left-melds"><div class="meld-empty-hint">Belum ada kartu jadi</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="my-step-badge" style="display:none;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;"></span>
+        <span id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
+          BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
+        </span>
       </div>
     </div>
 
-    <!-- PLAYER 1 (ANDA): BOTTOM RIGHT / MAIN -->
-    <div id="zone-bottom" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
-      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 6px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:11px;padding:3px 10px;">★ GILIRAN ANDA! ★</span>
-          <span id="my-info" class="player-title" style="font-size:13px;color:#facc15;">Anda (Player 1)</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span id="my-step-badge" style="display:none;font-size:10.5px;font-weight:900;padding:3px 10px;border-radius:999px;"></span>
-          <span id="my-seri-badge" style="font-size:10px;font-weight:800;color:#f87171;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:999px;">
-            BELUM ADA SERI MIN 3 (AWAS TERBAKAR!)
-          </span>
-        </div>
-      </div>
-
-      <!-- PLAYER MELDS -->
-      <div id="my-melds" class="meld-container" style="width:100%;">
-        <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
-      </div>
-
-      <!-- PLAYER HAND (50% OVERLAPPING FAN) -->
-      <div id="my-hand"></div>
+    <!-- PLAYER MELDS -->
+    <div id="my-melds" class="meld-container" style="width:100%;">
+      <div class="meld-empty-hint">Belum ada kartu jadi di meja • Wajib min 1 Seri Urut agar aman</div>
     </div>
+
+    <!-- PLAYER HAND (50% OVERLAPPING FAN) -->
+    <div id="my-hand"></div>
   </div>
 
   <!-- ACTION DOCK (ALWAYS 100% VISIBLE & ACCESSIBLE!) -->
@@ -2487,7 +2469,7 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
   const meldsEl = document.getElementById(`${prefix}-melds`);
 
   if (!zoneEl || !p) return;
-  const basePodClass = (prefix === 'bottom-left') ? 'zone-box opp-pod opp-pod-bottom' : 'zone-box opp-pod';
+  const basePodClass = 'zone-box opp-pod';
   zoneEl.className = basePodClass + (isTurn ? ' zone-active opponent-turn-active' : '');
 
   const badgeHTML = isTurn ? `<span class="turn-badge" style="background:#38bdf8;color:#082f49;box-shadow:0 0 10px #38bdf8;">⏳ SEDANG JALAN...</span> ` : '';
@@ -2863,36 +2845,37 @@ function updateUI(st) {
     }
   }
 
-  // Render Opponents (2 ATAS 2 BAWAH ARCHITECTURE)
+  // Render Opponents (3 ATAS, 1 BAWAH ARCHITECTURE)
   const n = st.players.length;
   const isSpec = Boolean(mySeat === null || st.is_spectator || spectatorMode);
   const showOpponentFace = Boolean(isSpec || st.show_bot_hands);
   const zTopLeft = document.getElementById('zone-top-left');
+  const zTopMid = document.getElementById('zone-top-mid');
   const zTopRight = document.getElementById('zone-top-right');
-  const zBottomLeft = document.getElementById('zone-bottom-left');
-  const playersBottomRow = document.getElementById('players-bottom-row');
+  const oppTopRow = document.getElementById('opponents-top-row');
 
   if (n === 2) {
-    if (zTopLeft) zTopLeft.style.display = 'flex';
+    if (oppTopRow) oppTopRow.style.gridTemplateColumns = '1fr';
+    if (zTopLeft) zTopLeft.style.display = 'none';
+    if (zTopMid) zTopMid.style.display = 'flex';
     if (zTopRight) zTopRight.style.display = 'none';
-    if (zBottomLeft) zBottomLeft.style.display = 'none';
-    if (playersBottomRow) playersBottomRow.style.gridTemplateColumns = '1fr';
-    renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top-mid', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
   } else if (n === 3) {
+    if (oppTopRow) oppTopRow.style.gridTemplateColumns = '1fr 1fr';
     if (zTopLeft) zTopLeft.style.display = 'flex';
+    if (zTopMid) zTopMid.style.display = 'none';
     if (zTopRight) zTopRight.style.display = 'flex';
-    if (zBottomLeft) zBottomLeft.style.display = 'none';
-    if (playersBottomRow) playersBottomRow.style.gridTemplateColumns = '1fr';
     renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
     renderOpponentZone('top-right', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
   } else {
+    // 4 Players: 3 Opponents side-by-side across the top!
+    if (oppTopRow) oppTopRow.style.gridTemplateColumns = 'repeat(3, 1fr)';
     if (zTopLeft) zTopLeft.style.display = 'flex';
+    if (zTopMid) zTopMid.style.display = 'flex';
     if (zTopRight) zTopRight.style.display = 'flex';
-    if (zBottomLeft) zBottomLeft.style.display = 'flex';
-    if (playersBottomRow) playersBottomRow.style.gridTemplateColumns = 'minmax(240px, 310px) 1fr';
     renderOpponentZone('top-left', st.players[(activeSeat + 1) % n], st.current_turn_seat === (activeSeat + 1) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('top-right', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
-    renderOpponentZone('bottom-left', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top-mid', st.players[(activeSeat + 2) % n], st.current_turn_seat === (activeSeat + 2) % n, showOpponentFace, st.target_score, leaderSeat);
+    renderOpponentZone('top-right', st.players[(activeSeat + 3) % n], st.current_turn_seat === (activeSeat + 3) % n, showOpponentFace, st.target_score, leaderSeat);
   }
 
   // Render Player Zone
@@ -3231,14 +3214,14 @@ function getZoneElementForSeat(seat) {
   }
   const n = (latestState && latestState.players) ? latestState.players.length : 4;
   if (n === 2) {
-    if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
+    if (seat === (active + 1) % n) return document.getElementById('zone-top-mid');
   } else if (n === 3) {
     if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
     if (seat === (active + 2) % n) return document.getElementById('zone-top-right');
   } else {
     if (seat === (active + 1) % n) return document.getElementById('zone-top-left');
-    if (seat === (active + 2) % n) return document.getElementById('zone-top-right');
-    if (seat === (active + 3) % n) return document.getElementById('zone-bottom-left');
+    if (seat === (active + 2) % n) return document.getElementById('zone-top-mid');
+    if (seat === (active + 3) % n) return document.getElementById('zone-top-right');
   }
   return document.getElementById('zone-bottom');
 }
