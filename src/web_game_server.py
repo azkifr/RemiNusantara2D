@@ -846,6 +846,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     user-select: none;
     box-shadow: 0 3px 10px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.85);
     flex-shrink: 0;
+    overflow: hidden !important;
+    isolation: isolate;
   }
   .card.locked {
     opacity: 0.65;
@@ -2350,10 +2352,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
     width: auto !important;
     aspect-ratio: 5 / 7;
     margin-left: calc(min(100cqh, 220px) * -0.30) !important;
+    position: relative;
+    isolation: isolate;
   }
   #my-hand .hand-card-slot:first-child { margin-left: auto !important; }
   #my-hand .hand-card-slot:last-child { margin-right: auto; }
-  #my-hand .hand-card-slot .card { border-radius: 9px; }
+  #my-hand .hand-card-slot .card {
+    border-radius: 9px;
+    overflow: hidden !important;
+    isolation: isolate;
+  }
+  #my-hand .hand-card-slot:hover { z-index: 80 !important; }
+  #my-hand .hand-card-slot.selected-slot { z-index: 75 !important; }
   #my-hand .hand-card-slot:hover .card { transform: translateY(-14px); }
   #my-hand .hand-card-slot.selected-slot .card,
   #my-hand .hand-card-slot .card.selected { transform: translateY(-19px) !important; }
@@ -2368,6 +2378,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex-direction: column;
     z-index: 2;
     pointer-events: none;
+    overflow: hidden !important;
+    border-radius: inherit;
   }
   .court-half {
     flex: 1;
@@ -2376,6 +2388,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: center;
     padding: 2cqh 14cqw;
+    overflow: hidden !important;
+  }
+  .court-half svg {
+    max-width: 100%;
+    max-height: 100%;
     overflow: hidden;
   }
   .court-half.court-bottom {
@@ -2384,6 +2401,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .cars-checker-ribbon {
     height: 8cqh;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden !important;
     background-image: 
       linear-gradient(45deg, #111827 25%, transparent 25%), 
       linear-gradient(-45deg, #111827 25%, transparent 25%), 
@@ -2410,6 +2430,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
     justify-content: center;
     z-index: 2;
     pointer-events: none;
+    overflow: hidden !important;
+  }
+  .piston-cup-ace svg {
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
   }
   .cars-speed-lines {
     position: absolute;
@@ -3909,9 +3935,11 @@ function updateUI(st) {
               <button class="slot-arrow-btn" onclick="event.stopPropagation(); slideCardById('${c.id}', 1);" title="Geser Kanan (Shift Right)">▶</button>
             </div>` : '';
           const animClass = isNewRound ? 'deal-anim' : '';
-          const animDelayStyle = isNewRound ? `style="animation-delay: ${(i * 0.06).toFixed(2)}s;"` : '';
+          const slotZIndex = isSel ? 70 : (i + 1);
+          const animDelayStyle = isNewRound ? `animation-delay: ${(i * 0.06).toFixed(2)}s;` : '';
+          const slotStyle = `style="z-index: ${slotZIndex}; ${animDelayStyle}"`;
           return `<div class="hand-card-slot ${isSel ? 'selected-slot' : ''} ${animClass}"
-                       ${animDelayStyle}
+                       ${slotStyle}
                        data-card-id="${c.id}"
                        draggable="true"
                        ondragstart="onHandCardDragStart(event, '${c.id}')"
@@ -5420,13 +5448,14 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                 p0.player_id = ""
                 p0.name = "Pembalap #95"
                 p0.hand = [
-                    Card('AS', 'A', 'S'),
-                    Card('KH', 'K', 'H'),
-                    Card('QD', 'Q', 'D'),
-                    Card('JC', 'J', 'C'),
+                    Card('2H', '2', 'H'),
+                    Card('3D', '3', 'D'),
+                    Card('6S', '6', 'S'),
+                    Card('10H', '10', 'H'),
+                    Card('JH', 'J', 'H'),
+                    Card('AD', 'A', 'D'),
                     Card('JOKER_1', 'JOKER', 'J'),
-                    Card('10S', '10', 'S'),
-                    Card('8D', '8', 'D'),
+                    Card('AS', 'A', 'S'),
                 ]
                 GAME.discard_pile = [
                     Card('4S', '4', 'S'),
