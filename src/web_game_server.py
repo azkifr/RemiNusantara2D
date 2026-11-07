@@ -222,28 +222,49 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* TURN BANNER & STATUS */
   .turn-banner {
-    padding: 3px 12px;
+    padding: 5px 16px;
     border-radius: 8px;
     font-weight: 800;
-    font-size: 11.5px;
+    font-size: 12px;
     color: #fff;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     text-align: center;
     width: 100%;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
   .turn-my {
-    background: linear-gradient(90deg, rgba(21, 128, 61, 0.5) 0%, #15803d 50%, rgba(21, 128, 61, 0.5) 100%);
-    border: 1px solid #4ade80;
-    box-shadow: 0 0 14px rgba(74, 222, 128, 0.35);
+    background: linear-gradient(90deg, #991b1b 0%, #ea580c 25%, #f59e0b 50%, #ea580c 75%, #991b1b 100%) !important;
+    border: 1.8px solid #fde047 !important;
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.75), inset 0 0 10px rgba(254, 240, 138, 0.35) !important;
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.85), 0 0 10px rgba(254, 240, 138, 0.9) !important;
+    font-weight: 900 !important;
+    font-size: 13px !important;
+    letter-spacing: 0.6px !important;
+    animation: turnMyGlow 1.6s infinite alternate ease-in-out !important;
+  }
+  @keyframes turnMyGlow {
+    0% {
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.6), inset 0 0 8px rgba(254, 240, 138, 0.25);
+      border-color: #fde047;
+    }
+    100% {
+      box-shadow: 0 0 30px rgba(234, 88, 12, 0.95), 0 0 10px #fde047, inset 0 0 16px rgba(254, 240, 138, 0.5);
+      border-color: #facc15;
+    }
   }
   .turn-opp {
-    background: linear-gradient(90deg, rgba(194, 65, 12, 0.5) 0%, #c2410c 50%, rgba(194, 65, 12, 0.5) 100%);
-    border: 1px solid #fb923c;
+    background: linear-gradient(90deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.9) 50%, rgba(30, 41, 59, 0.8) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
   }
   .status-notif {
     font-size: 11px;
@@ -670,9 +691,25 @@ HTML_PAGE = r"""<!DOCTYPE html>
   }
   #zone-bottom.my-turn-active {
     border-color: #facc15 !important;
-    background: radial-gradient(ellipse at 50% 10%, rgba(21, 128, 61, 0.35) 0%, rgba(4, 26, 16, 0.98) 100%) !important;
-    box-shadow: 0 0 28px rgba(250, 204, 21, 0.65), 0 4px 24px rgba(0,0,0,0.6), inset 0 0 16px rgba(250, 204, 21, 0.25) !important;
-    animation: my-turn-pulse 1.6s infinite alternate ease-in-out;
+    background: radial-gradient(ellipse at 50% 10%, rgba(245, 158, 11, 0.16) 0%, rgba(4, 26, 16, 0.98) 100%) !important;
+    box-shadow: 0 0 32px rgba(250, 204, 21, 0.55), 0 4px 24px rgba(0,0,0,0.6), inset 0 0 18px rgba(250, 204, 21, 0.2) !important;
+    animation: myZonePulse 2s infinite alternate ease-in-out;
+  }
+  @keyframes myZonePulse {
+    0% { box-shadow: 0 0 18px rgba(250, 204, 21, 0.35), inset 0 0 10px rgba(250, 204, 21, 0.15); border-color: #facc15; }
+    100% { box-shadow: 0 0 34px rgba(234, 88, 12, 0.7), 0 0 12px #fde047, inset 0 0 20px rgba(250, 204, 21, 0.28); border-color: #fde047; }
+  }
+  #my-turn-badge {
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #dc2626 100%) !important;
+    color: #ffffff !important;
+    font-size: 11.5px !important;
+    font-weight: 900 !important;
+    padding: 3px 12px !important;
+    border-radius: 999px !important;
+    border: 1.5px solid #fef08a !important;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.85) !important;
+    letter-spacing: 0.5px !important;
+    animation: turnMyGlow 1.2s infinite alternate !important;
   }
   .stadium-hdr {
     display: flex;
@@ -2000,15 +2037,41 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #disc-active-cards .card .c-point-pill, #my-hand .card .c-point-pill { font-size: 7.5cqh; bottom: 4cqh; left: 6cqw; padding: 0.5cqh 5cqw; }
   #disc-active-cards .card .c-badge-pill { font-size: 8.5cqh !important; bottom: 3cqh !important; padding: 0.6cqh 6cqw !important; }
   #wild-box .card .c-wild-ribbon, #disc-active-cards .card .c-wild-ribbon, #my-hand .card .c-wild-ribbon { font-size: 7cqh; top: 4cqh; right: 5cqw; padding: 0.4cqh 6cqw; }
-  /* Kartu mini (kartu jadi / buangan terkubur) */
-  #disc-buried-cards .card .c-mini-top, .opp-melds-box .card .c-mini-top, .opp-count-box .card .c-mini-top, #my-melds .card .c-mini-top {
-    font-size: 21cqh !important; top: 4cqh !important; left: 8cqw !important; right: 8cqw !important;
+  /* Kartu mini umum (kartu jadi / count) */
+  .opp-melds-box .card .c-mini-top, .opp-count-box .card .c-mini-top, #my-melds .card .c-mini-top {
+    font-size: 22cqh !important; top: 4cqh !important; left: 7cqw !important; right: 7cqw !important; z-index: 5 !important;
   }
-  #disc-buried-cards .card .c-mini-center, .opp-melds-box .card .c-mini-center, .opp-count-box .card .c-mini-center, #my-melds .card .c-mini-center {
-    font-size: 46cqh !important; top: 56% !important;
+  .opp-melds-box .card .c-mini-center, .opp-count-box .card .c-mini-center, #my-melds .card .c-mini-center {
+    font-size: 34cqh !important; top: 58% !important; z-index: 1 !important;
   }
-  #disc-buried-cards .card .c-mini-bot, .opp-melds-box .card .c-mini-bot, .opp-count-box .card .c-mini-bot, #my-melds .card .c-mini-bot {
-    font-size: 11cqh !important; bottom: 3cqh !important; display: block !important;
+  .opp-melds-box .card .c-mini-bot, .opp-count-box .card .c-mini-bot, #my-melds .card .c-mini-bot {
+    font-size: 11cqh !important; bottom: 3cqh !important; display: block !important; z-index: 5 !important;
+  }
+
+  /* KHUSUS KARTU BUANGAN TERKUBUR (>7): SIMBOL SUIT TENGAH DISKALAKAN KECIL (WATERMARK) AGAR TIDAK MENUTUPI ANGKA KARTU */
+  #disc-buried-cards .card .c-mini-top {
+    font-size: 25cqh !important;
+    font-weight: 900 !important;
+    top: 4cqh !important;
+    left: 6cqw !important;
+    right: 6cqw !important;
+    z-index: 5 !important;
+    line-height: 1 !important;
+  }
+  #disc-buried-cards .card .c-mini-center,
+  #disc-buried-cards .card .c-center {
+    font-size: 20cqh !important;
+    top: 62% !important;
+    left: 50% !important;
+    opacity: 0.35 !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+  #disc-buried-cards .card .c-mini-bot {
+    font-size: 11cqh !important;
+    bottom: 3cqh !important;
+    z-index: 5 !important;
+    display: block !important;
   }
 
   /* ---------- 1. 7 KARTU BUANGAN AKTIF: paskan 7 slot dari ujung ke ujung ---------- */
@@ -2086,18 +2149,21 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* ---------- 3. PAK KARTU & BUKAAN WILD: kartu isi tinggi kotak ---------- */
   #pak-box, #wild-box { padding: 6px 12px; gap: 12px; justify-content: center; }
   .card-back {
-    background: radial-gradient(circle at 50% 35%, #b91c1c 0%, #7f1d1d 60%, #450a0a 100%) !important;
-    border: 1.5px solid #fbbf24 !important;
-    box-shadow: 2px 2px 0 #7f1d1d, 0 4px 10px rgba(0,0,0,0.5) !important;
+    background: #09090b !important;
+    border: 1px solid rgba(0,0,0,0.5) !important;
+    box-shadow: 1px 1px 0 #000, 0 4px 10px rgba(0,0,0,0.5) !important;
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
   }
-  .card-back::before {
-    content: '';
-    position: absolute;
-    inset: 3px;
-    border: 1px dashed rgba(253, 224, 71, 0.45);
-    border-radius: 4px;
+  .card-back::before { content: none !important; }
+  .card-back svg.cars-back-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
     pointer-events: none;
   }
   #pak-box .pak-mini-deck {
@@ -2106,14 +2172,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
     aspect-ratio: 5 / 7;
     border-radius: 8px !important;
     font-size: 0;
-    box-shadow: 3px 3px 0 #7f1d1d, 6px 6px 0 #450a0a, 0 6px 14px rgba(0,0,0,0.6) !important;
+    box-shadow: 3px 3px 0 #09090b, 5px 5px 0 #450a0a, 0 6px 14px rgba(0,0,0,0.6) !important;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
   #pak-box .pak-mini-deck::after { content: none; }
-  #pak-box .card-back-suit { font-size: 32cqh; color: #fde047; opacity: 0.95; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }
   #pak-box .pak-label, #wild-box .wild-label { font-size: clamp(10px, 13cqh, 15px); letter-spacing: 0.08em; }
   #pak-box .pak-count { font-size: clamp(13px, 24cqh, 30px); line-height: 1; font-variant-numeric: tabular-nums; }
   #pak-box .pak-hint, #wild-box .wild-sub { font-size: clamp(8px, 9cqh, 11px); }
@@ -2294,13 +2359,98 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #my-hand .hand-card-slot .card.selected { transform: translateY(-19px) !important; }
   #my-hand .slot-slide-ctrls { top: -21px; }
 
-  @media (prefers-reduced-motion: reduce) {
+  
+  /* DISNEY & PIXAR CARS INSPIRED PLAYING CARDS THEME */
+  .cars-court-split {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .court-half {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2cqh 14cqw;
+    overflow: hidden;
+  }
+  .court-half.court-bottom {
+    transform: rotate(180deg);
+  }
+  .cars-checker-ribbon {
+    height: 8cqh;
+    width: 100%;
+    background-image: 
+      linear-gradient(45deg, #111827 25%, transparent 25%), 
+      linear-gradient(-45deg, #111827 25%, transparent 25%), 
+      linear-gradient(45deg, transparent 75%, #111827 75%), 
+      linear-gradient(-45deg, transparent 75%, #111827 75%);
+    background-size: 5px 5px;
+    background-position: 0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px;
+    background-color: #ffffff;
+    border-top: 1px solid #dc2626;
+    border-bottom: 1px solid #dc2626;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 4;
+  }
+  .piston-cup-ace {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72cqw;
+    height: 64cqh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .cars-speed-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.12;
+    background: repeating-linear-gradient(172deg, transparent 0, transparent 18px, rgba(0,0,0,0.18) 18px, transparent 20px);
+    z-index: 0;
+  }
+  .card.red .cars-speed-lines {
+    background: repeating-linear-gradient(172deg, transparent 0, transparent 18px, rgba(220,38,38,0.22) 18px, transparent 20px);
+  }
+@media (prefers-reduced-motion: reduce) {
     #disc-active-cards .card.active-discard { animation: none; }
   }
 
 </style>
 </head>
 <body>
+
+<!-- DISNEY & PIXAR CARS GLOBAL SVG DEFINITIONS -->
+<svg style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true">
+  <defs>
+    <pattern id="cars-checker-pat" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#ffffff"/>
+      <rect x="3" width="3" height="3" fill="#111827"/>
+      <rect y="3" width="3" height="3" fill="#111827"/>
+      <rect x="3" y="3" width="3" height="3" fill="#ffffff"/>
+    </pattern>
+    <radialGradient id="cars-red-field-g" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="70%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#450a0a"/>
+    </radialGradient>
+    <linearGradient id="cars-gold-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="50%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+  </defs>
+</svg>
 
 <div id="lobby-screen">
   <div class="lobby-container">
@@ -2464,7 +2614,39 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <div id="pak-box" onclick="sendAction('DRAW_DECK')" draggable="true" ondragstart="onPakDragStart(event)" ondragend="onDragEndClean(event)" title="Klik atau Tarik ke tangan untuk ambil kartu (D)">
           <div class="pak-card-back-visual">
             <div class="card-back pak-mini-deck">
-              <span class="card-back-suit">♠</span>
+              <svg class="cars-back-svg" viewBox="0 0 100 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                <rect x="0" y="0" width="100" height="140" rx="6" fill="#09090b"/>
+                <rect x="2.5" y="2.5" width="95" height="135" rx="5" fill="url(#cars-checker-pat)" stroke="#09090b" stroke-width="1"/>
+                <rect x="6.5" y="6.5" width="87" height="127" rx="4" fill="url(#cars-red-field-g)" stroke="#fbbf24" stroke-width="1.2"/>
+                <rect x="8.5" y="8.5" width="83" height="123" rx="3" fill="none" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="2 1"/>
+                <path d="M 11 11 L 19 17 L 16 20 L 25 26 L 20 20 L 23 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 11 L 81 17 L 84 20 L 75 26 L 80 20 L 77 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 11 129 L 19 123 L 16 120 L 25 114 L 20 120 L 23 123 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 129 L 81 123 L 84 120 L 75 114 L 80 120 L 77 123 Z" fill="#facc15" opacity="0.9"/>
+                <g transform="translate(50, 42)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 98) rotate(180)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 70)">
+                  <rect x="-23" y="-3" width="46" height="6" rx="3" fill="url(#cars-gold-g)" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="-20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle r="12" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="1.8"/>
+                  <circle r="8.5" fill="#1e293b"/>
+                  <circle r="5" fill="#cbd5e1" stroke="#09090b" stroke-width="0.8"/>
+                  <circle r="2" fill="#ef4444"/>
+                </g>
+              </svg>
             </div>
           </div>
           <div class="pak-info-side">
@@ -2497,7 +2679,41 @@ HTML_PAGE = r"""<!DOCTYPE html>
           <!-- LEFT: JUMLAH KARTU (NUMBER) -->
           <div class="opp-count-box" id="opp-1-cards">
             <div class="opp-hand-count-visual">
-              <div class="card-back opp-card-back-icon"><span>♠</span></div>
+              <div class="card-back opp-card-back-icon">
+              <svg class="cars-back-svg" viewBox="0 0 100 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                <rect x="0" y="0" width="100" height="140" rx="6" fill="#09090b"/>
+                <rect x="2.5" y="2.5" width="95" height="135" rx="5" fill="url(#cars-checker-pat)" stroke="#09090b" stroke-width="1"/>
+                <rect x="6.5" y="6.5" width="87" height="127" rx="4" fill="url(#cars-red-field-g)" stroke="#fbbf24" stroke-width="1.2"/>
+                <rect x="8.5" y="8.5" width="83" height="123" rx="3" fill="none" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="2 1"/>
+                <path d="M 11 11 L 19 17 L 16 20 L 25 26 L 20 20 L 23 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 11 L 81 17 L 84 20 L 75 26 L 80 20 L 77 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 11 129 L 19 123 L 16 120 L 25 114 L 20 120 L 23 123 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 129 L 81 123 L 84 120 L 75 114 L 80 120 L 77 123 Z" fill="#facc15" opacity="0.9"/>
+                <g transform="translate(50, 42)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 98) rotate(180)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 70)">
+                  <rect x="-23" y="-3" width="46" height="6" rx="3" fill="url(#cars-gold-g)" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="-20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle r="12" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="1.8"/>
+                  <circle r="8.5" fill="#1e293b"/>
+                  <circle r="5" fill="#cbd5e1" stroke="#09090b" stroke-width="0.8"/>
+                  <circle r="2" fill="#ef4444"/>
+                </g>
+              </svg>
+            </div>
               <div class="opp-count-info">
                 <span class="opp-count-num">7</span>
                 <span class="opp-count-txt">KARTU</span>
@@ -2521,7 +2737,41 @@ HTML_PAGE = r"""<!DOCTYPE html>
           <!-- LEFT: JUMLAH KARTU (NUMBER) -->
           <div class="opp-count-box" id="opp-2-cards">
             <div class="opp-hand-count-visual">
-              <div class="card-back opp-card-back-icon"><span>♠</span></div>
+              <div class="card-back opp-card-back-icon">
+              <svg class="cars-back-svg" viewBox="0 0 100 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                <rect x="0" y="0" width="100" height="140" rx="6" fill="#09090b"/>
+                <rect x="2.5" y="2.5" width="95" height="135" rx="5" fill="url(#cars-checker-pat)" stroke="#09090b" stroke-width="1"/>
+                <rect x="6.5" y="6.5" width="87" height="127" rx="4" fill="url(#cars-red-field-g)" stroke="#fbbf24" stroke-width="1.2"/>
+                <rect x="8.5" y="8.5" width="83" height="123" rx="3" fill="none" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="2 1"/>
+                <path d="M 11 11 L 19 17 L 16 20 L 25 26 L 20 20 L 23 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 11 L 81 17 L 84 20 L 75 26 L 80 20 L 77 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 11 129 L 19 123 L 16 120 L 25 114 L 20 120 L 23 123 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 129 L 81 123 L 84 120 L 75 114 L 80 120 L 77 123 Z" fill="#facc15" opacity="0.9"/>
+                <g transform="translate(50, 42)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 98) rotate(180)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 70)">
+                  <rect x="-23" y="-3" width="46" height="6" rx="3" fill="url(#cars-gold-g)" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="-20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle r="12" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="1.8"/>
+                  <circle r="8.5" fill="#1e293b"/>
+                  <circle r="5" fill="#cbd5e1" stroke="#09090b" stroke-width="0.8"/>
+                  <circle r="2" fill="#ef4444"/>
+                </g>
+              </svg>
+            </div>
               <div class="opp-count-info">
                 <span class="opp-count-num">7</span>
                 <span class="opp-count-txt">KARTU</span>
@@ -2545,7 +2795,41 @@ HTML_PAGE = r"""<!DOCTYPE html>
           <!-- LEFT: JUMLAH KARTU (NUMBER) -->
           <div class="opp-count-box" id="opp-3-cards">
             <div class="opp-hand-count-visual">
-              <div class="card-back opp-card-back-icon"><span>♠</span></div>
+              <div class="card-back opp-card-back-icon">
+              <svg class="cars-back-svg" viewBox="0 0 100 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+                <rect x="0" y="0" width="100" height="140" rx="6" fill="#09090b"/>
+                <rect x="2.5" y="2.5" width="95" height="135" rx="5" fill="url(#cars-checker-pat)" stroke="#09090b" stroke-width="1"/>
+                <rect x="6.5" y="6.5" width="87" height="127" rx="4" fill="url(#cars-red-field-g)" stroke="#fbbf24" stroke-width="1.2"/>
+                <rect x="8.5" y="8.5" width="83" height="123" rx="3" fill="none" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="2 1"/>
+                <path d="M 11 11 L 19 17 L 16 20 L 25 26 L 20 20 L 23 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 11 L 81 17 L 84 20 L 75 26 L 80 20 L 77 17 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 11 129 L 19 123 L 16 120 L 25 114 L 20 120 L 23 123 Z" fill="#facc15" opacity="0.9"/>
+                <path d="M 89 129 L 81 123 L 84 120 L 75 114 L 80 120 L 77 123 Z" fill="#facc15" opacity="0.9"/>
+                <g transform="translate(50, 42)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 98) rotate(180)">
+                  <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+                  <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+                  <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+                  <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+                  <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+                </g>
+                <g transform="translate(50, 70)">
+                  <rect x="-23" y="-3" width="46" height="6" rx="3" fill="url(#cars-gold-g)" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="-20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle cx="20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+                  <circle r="12" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="1.8"/>
+                  <circle r="8.5" fill="#1e293b"/>
+                  <circle r="5" fill="#cbd5e1" stroke="#09090b" stroke-width="0.8"/>
+                  <circle r="2" fill="#ef4444"/>
+                </g>
+              </svg>
+            </div>
               <div class="opp-count-info">
                 <span class="opp-count-num">7</span>
                 <span class="opp-count-txt">KARTU</span>
@@ -2565,7 +2849,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   <div id="zone-bottom" class="zone-box player-stadium-console" ondragover="onHandDragOver(event)" ondragleave="onHandDragLeave(event)" ondrop="onHandDrop(event)">
     <div class="stadium-hdr">
       <div style="display:flex;align-items:center;gap:8px;">
-        <span id="my-turn-badge" class="turn-badge" style="display:none;font-size:10.5px;padding:2px 8px;">★ GILIRAN ANDA! ★</span>
+        <span id="my-turn-badge" class="turn-badge" style="display:none;">⚡ GILIRAN ANDA! ⚡</span>
         <span id="my-info" class="player-title" style="font-size:12px;color:#facc15;">Anda (Player 1)</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
@@ -2826,6 +3110,149 @@ function groupBadge(c) {
   return '+5';
 }
 
+function getCarsCardBackSVG() {
+  return `<svg class="cars-back-svg" viewBox="0 0 100 140" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <rect x="0" y="0" width="100" height="140" rx="6" fill="#09090b"/>
+    <rect x="2.5" y="2.5" width="95" height="135" rx="5" fill="url(#cars-checker-pat)" stroke="#09090b" stroke-width="1"/>
+    <rect x="6.5" y="6.5" width="87" height="127" rx="4" fill="url(#cars-red-field-g)" stroke="#fbbf24" stroke-width="1.2"/>
+    <rect x="8.5" y="8.5" width="83" height="123" rx="3" fill="none" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="2 1"/>
+    <path d="M 11 11 L 19 17 L 16 20 L 25 26 L 20 20 L 23 17 Z" fill="#facc15" opacity="0.9"/>
+    <path d="M 89 11 L 81 17 L 84 20 L 75 26 L 80 20 L 77 17 Z" fill="#facc15" opacity="0.9"/>
+    <path d="M 11 129 L 19 123 L 16 120 L 25 114 L 20 120 L 23 123 Z" fill="#facc15" opacity="0.9"/>
+    <path d="M 89 129 L 81 123 L 84 120 L 75 114 L 80 120 L 77 123 Z" fill="#facc15" opacity="0.9"/>
+    <g transform="translate(50, 42)">
+      <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+      <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+      <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+      <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+      <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+    </g>
+    <g transform="translate(50, 98) rotate(180)">
+      <circle r="21" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="2.2"/>
+      <circle r="18" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+      <circle r="15.5" fill="none" stroke="#fde047" stroke-width="0.8" stroke-dasharray="1.5 1"/>
+      <text x="-0.5" y="6.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#09090b" letter-spacing="-0.5">95</text>
+      <text x="0" y="5.5" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-style="italic" font-size="19" fill="#facc15" letter-spacing="-0.5">95</text>
+    </g>
+    <g transform="translate(50, 70)">
+      <rect x="-23" y="-3" width="46" height="6" rx="3" fill="url(#cars-gold-g)" stroke="#09090b" stroke-width="1"/>
+      <circle cx="-20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+      <circle cx="20" cy="0" r="4.2" fill="#facc15" stroke="#09090b" stroke-width="1"/>
+      <circle r="12" fill="#09090b" stroke="url(#cars-gold-g)" stroke-width="1.8"/>
+      <circle r="8.5" fill="#1e293b"/>
+      <circle r="5" fill="#cbd5e1" stroke="#09090b" stroke-width="0.8"/>
+      <circle r="2" fill="#ef4444"/>
+    </g>
+  </svg>`;
+}
+
+function getCarsAceSpadesSVG() {
+  return `<div class="piston-cup-ace">
+    <svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <text x="50" y="16" text-anchor="middle" font-family="'Outfit', serif" font-weight="800" font-size="11" fill="#09090b" letter-spacing="1.5">BICYCLE</text>
+      <text x="50" y="24" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="600" font-size="5" fill="#64748b" letter-spacing="0.5">TRUSTED SINCE 1885</text>
+      <path d="M 50 30 C 44 42 22 52 22 68 C 22 80 32 86 42 84 C 47 83 49 80 50 78 C 51 80 53 83 58 84 C 68 86 78 80 78 68 C 78 52 56 42 50 30 Z" fill="#09090b"/>
+      <path d="M 47 78 L 44 94 L 56 94 L 53 78 Z" fill="#09090b"/>
+      <g transform="translate(50, 60)">
+        <rect x="-8" y="8" width="16" height="4" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="0.8"/>
+        <path d="M -5 8 L -4 1 L 4 1 L 5 8 Z" fill="#eab308"/>
+        <path d="M -11 -7 C -11 3 11 3 11 -7 L -11 -7 Z" fill="#facc15" stroke="#ca8a04" stroke-width="0.8"/>
+        <path d="M -11 -6 C -17 -6 -17 0 -10 1" fill="none" stroke="#facc15" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M 11 -6 C 17 -6 17 0 10 1" fill="none" stroke="#facc15" stroke-width="1.4" stroke-linecap="round"/>
+        <rect x="-6" y="-14" width="12" height="6" rx="1" fill="#fde047" stroke="#ca8a04" stroke-width="0.8"/>
+        <line x1="-5" y1="-12" x2="5" y2="-12" stroke="#ca8a04" stroke-width="0.6"/>
+        <line x1="-5" y1="-10" x2="5" y2="-10" stroke="#ca8a04" stroke-width="0.6"/>
+      </g>
+      <text x="50" y="104" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="700" font-size="5.5" fill="#475569">DISNEY • PIXAR</text>
+      <text x="50" y="112" text-anchor="middle" font-family="'Impact', sans-serif" font-weight="900" font-style="italic" font-size="9" fill="#dc2626" letter-spacing="0.5">Cars</text>
+    </svg>
+  </div>`;
+}
+
+function getCarsKingSVG() {
+  return `<svg viewBox="0 0 70 42" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <g transform="translate(35, 22)">
+      <path d="M -22 -14 L -21 4 L -18 4 L -19 -14 Z" fill="#0284c7"/>
+      <rect x="-24" y="-16" width="10" height="3" rx="1" fill="#38bdf8"/>
+      <path d="M -24 6 C -20 -4 4 -6 18 1 C 24 4 25 7 24 9 L -24 9 Z" fill="#0284c7"/>
+      <path d="M -12 0 C -8 -6 4 -6 10 1 Z" fill="#e0f2fe"/>
+      <ellipse cx="-2" cy="-2" rx="2" ry="2.2" fill="#0f172a"/>
+      <ellipse cx="4" cy="-2" rx="2" ry="2.2" fill="#0f172a"/>
+      <circle cx="-1.5" cy="-2.5" r="0.7" fill="#fff"/>
+      <circle cx="4.5" cy="-2.5" r="0.7" fill="#fff"/>
+      <circle cx="-16" cy="9" r="4" fill="#09090b" stroke="#64748b" stroke-width="0.8"/>
+      <circle cx="16" cy="9" r="4" fill="#09090b" stroke="#64748b" stroke-width="0.8"/>
+      <text x="1" y="7" text-anchor="middle" font-family="'Impact', sans-serif" font-weight="900" font-style="italic" font-size="7.5" fill="#ffffff">43</text>
+    </g>
+  </svg>`;
+}
+
+function getCarsQueenSVG() {
+  return `<svg viewBox="0 0 70 42" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <g transform="translate(35, 22)">
+      <path d="M -20 7 C -18 -4 4 -6 18 2 C 22 5 23 8 21 9 L -21 9 Z" fill="#38bdf8"/>
+      <path d="M -10 1 C -6 -6 4 -6 10 2 Z" fill="#e0f2fe"/>
+      <ellipse cx="-1" cy="-1.5" rx="1.8" ry="2" fill="#0369a1"/>
+      <ellipse cx="4" cy="-1.5" rx="1.8" ry="2" fill="#0369a1"/>
+      <circle cx="-0.6" cy="-2" r="0.6" fill="#fff"/>
+      <circle cx="4.4" cy="-2" r="0.6" fill="#fff"/>
+      <circle cx="-14" cy="9" r="3.8" fill="#09090b" stroke="#94a3b8" stroke-width="0.8"/>
+      <circle cx="14" cy="9" r="3.8" fill="#09090b" stroke="#94a3b8" stroke-width="0.8"/>
+    </g>
+  </svg>`;
+}
+
+function getCarsJackSVG() {
+  return `<svg viewBox="0 0 70 42" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <g transform="translate(35, 22)">
+      <path d="M -22 6 C -18 -4 2 -5 18 1 C 23 4 23 8 21 9 L -22 9 Z" fill="#16a34a"/>
+      <path d="M -11 0 C -7 -5 3 -5 9 1 Z" fill="#f0fdf4"/>
+      <ellipse cx="-2" cy="-2" rx="2" ry="2.2" fill="#0f172a"/>
+      <ellipse cx="4" cy="-2" rx="2" ry="2.2" fill="#0f172a"/>
+      <rect x="14" y="4" width="7" height="3.5" rx="1" fill="#14532d"/>
+      <circle cx="-14" cy="9" r="4" fill="#09090b" stroke="#ca8a04" stroke-width="0.8"/>
+      <circle cx="15" cy="9" r="4" fill="#09090b" stroke="#ca8a04" stroke-width="0.8"/>
+      <text x="1" y="7" text-anchor="middle" font-family="'Impact', sans-serif" font-weight="900" font-style="italic" font-size="7.5" fill="#facc15">86</text>
+    </g>
+  </svg>`;
+}
+
+function getCarsMaterSVG() {
+  return `<svg viewBox="0 0 70 42" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <g transform="translate(35, 22)">
+      <line x1="-16" y1="4" x2="-8" y2="-12" stroke="#78350f" stroke-width="1.8"/>
+      <line x1="-8" y1="-12" x2="-2" y2="-4" stroke="#78350f" stroke-width="1"/>
+      <path d="M -2 -4 C -1 -1 -4 -1 -3 -3" fill="none" stroke="#451a03" stroke-width="1.2"/>
+      <path d="M -16 6 L -16 -2 L -6 -2 L -2 -8 L 8 -8 L 12 1 L 18 3 L 18 9 L -16 9 Z" fill="#b45309"/>
+      <rect x="15" y="5" width="2" height="3" fill="#fff" stroke="#451a03" stroke-width="0.4"/>
+      <rect x="17" y="5" width="2" height="3" fill="#fff" stroke="#451a03" stroke-width="0.4"/>
+      <circle cx="3" cy="-4" r="2.5" fill="#fef08a"/>
+      <circle cx="3" cy="-4" r="1.3" fill="#15803d"/>
+      <circle cx="8" cy="-4" r="2.5" fill="#fef08a"/>
+      <circle cx="8" cy="-4" r="1.3" fill="#15803d"/>
+      <circle cx="-11" cy="9" r="4.2" fill="#09090b" stroke="#78350f" stroke-width="0.8"/>
+      <circle cx="12" cy="9" r="4.2" fill="#09090b" stroke="#78350f" stroke-width="0.8"/>
+    </g>
+  </svg>`;
+}
+
+function getCarsMcQueenSVG() {
+  return `<svg viewBox="0 0 70 42" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <g transform="translate(35, 22)">
+      <path d="M -22 6 C -18 -4 4 -6 18 1 C 24 4 25 7 24 9 L -22 9 Z" fill="#dc2626"/>
+      <path d="M -12 0 C -8 -6 4 -6 10 1 Z" fill="#fee2e2"/>
+      <ellipse cx="-2" cy="-2" rx="2" ry="2.2" fill="#0284c7"/>
+      <ellipse cx="4" cy="-2" rx="2" ry="2.2" fill="#0284c7"/>
+      <circle cx="-1.5" cy="-2.5" r="0.7" fill="#fff"/>
+      <circle cx="4.5" cy="-2.5" r="0.7" fill="#fff"/>
+      <path d="M -10 6 L -2 4 L -4 9 L 4 3 L 2 7 L 12 5" fill="none" stroke="#facc15" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="-15" cy="9" r="4" fill="#09090b" stroke="#ef4444" stroke-width="0.8"/>
+      <circle cx="15" cy="9" r="4" fill="#09090b" stroke="#ef4444" stroke-width="0.8"/>
+      <text x="0" y="7" text-anchor="middle" font-family="'Impact', sans-serif" font-weight="900" font-style="italic" font-size="7.5" fill="#facc15">95</text>
+    </g>
+  </svg>`;
+}
+
 function renderCardHTML(c, opts = {}) {
   const isRed = c.suit === 'H' || c.suit === 'D';
   const isWild = Boolean(c.is_wild || c.rank === 'JOKER');
@@ -2859,13 +3286,32 @@ function renderCardHTML(c, opts = {}) {
     </div>`;
   }
 
+  // Disney & Pixar Cars Inspired Court Cards & Special Graphic Center
+  let centerContent = '';
+  if (c.rank === 'A' && c.suit === 'S' && !isWild) {
+    centerContent = getCarsAceSpadesSVG();
+  } else if (c.rank === 'JOKER') {
+    centerContent = `<div class="cars-court-split"><div class="court-half">${getCarsMaterSVG()}</div><div class="cars-checker-ribbon" style="border-color:#7c3aed;"></div><div class="court-half court-bottom">${getCarsMaterSVG()}</div></div>`;
+  } else if (c.rank === 'K') {
+    centerContent = `<div class="cars-court-split"><div class="court-half">${getCarsKingSVG()}</div><div class="cars-checker-ribbon"></div><div class="court-half court-bottom">${getCarsKingSVG()}</div></div>`;
+  } else if (c.rank === 'Q') {
+    centerContent = `<div class="cars-court-split"><div class="court-half">${getCarsQueenSVG()}</div><div class="cars-checker-ribbon"></div><div class="court-half court-bottom">${getCarsQueenSVG()}</div></div>`;
+  } else if (c.rank === 'J') {
+    centerContent = `<div class="cars-court-split"><div class="court-half">${getCarsJackSVG()}</div><div class="cars-checker-ribbon"></div><div class="court-half court-bottom">${getCarsJackSVG()}</div></div>`;
+  } else if (isWild) {
+    centerContent = `<div class="cars-court-split"><div class="court-half">${getCarsMcQueenSVG()}</div><div class="cars-checker-ribbon" style="border-color:#f59e0b;"></div><div class="court-half court-bottom">${getCarsMcQueenSVG()}</div></div>`;
+  } else {
+    centerContent = `<div class="c-center">${suitIcon}</div>`;
+  }
+
   return `<div class="${cls}" ${onclick} ${onctx} ${draggable} ${ondragstart} ${ondragend} ${ondragover} ${ondragleave} ${ondrop} title="${opts.hint || ''}">
+    <div class="cars-speed-lines"></div>
     <div class="c-corner c-corner-tl">
       <span class="c-rank">${topRank}</span>
       <span class="c-suit-mini">${suitIcon}</span>
     </div>
     ${isWild && c.rank !== 'JOKER' ? '<div class="c-wild-ribbon">WILD</div>' : ''}
-    <div class="c-center">${c.rank === 'JOKER' ? '★' : suitIcon}</div>
+    ${centerContent}
     ${!isWild && pointText && !isActionBadge ? `<div class="c-point-pill">${pointText}</div>` : ''}
     ${isActionBadge ? `<div class="c-badge-pill">${opts.badge}</div>` : ''}
     <div class="c-corner c-corner-br">
@@ -2934,7 +3380,7 @@ function renderOpponentZone(prefix, p, isTurn, showFace, targetScore, leaderSeat
     // Elegant casino card back with "jumlah kartu (number)"
     handHTML = `
       <div class="opp-hand-count-visual" title="${p.name} memegang ${p.hand_count} kartu">
-        <div class="card-back opp-card-back-icon"><span>♠</span></div>
+        <div class="card-back opp-card-back-icon">${getCarsCardBackSVG()}</div>
         <div class="opp-count-info">
           <span class="opp-count-num">${p.hand_count}</span>
           <span class="opp-count-txt">KARTU</span>
@@ -3102,14 +3548,14 @@ function updateUI(st) {
     } else if (isMyTurn) {
       bannerEl.className = 'turn-banner turn-my';
       if (st.phase === 'TURN_DRAW') {
-        bannerEl.textContent = '★ GILIRAN ANDA! [TAHAP 1: AMBIL KARTU] -> Klik PAK KARTU atau Buangan #1-#7 ★';
+        bannerEl.innerHTML = '⚡ 🏁 <b>GILIRAN ANDA! [TAHAP 1: AMBIL KARTU]</b> — Klik PAK KARTU atau Buangan #1–#7 🏁 ⚡';
       } else {
         if (canTutup) {
-          bannerEl.textContent = `★ GILIRAN ANDA! KARTU JADI LENGKAP! KLIK \'TUTUP TANGAN +250 (T)\' (Buang ${tutupCardId})! ★`;
+          bannerEl.innerHTML = `⚡ 🏆 <b>GILIRAN ANDA! KARTU JADI LENGKAP!</b> — KLIK \'TUTUP TANGAN +250 (T)\' (Buang ${tutupCardId})! 🏆 ⚡`;
         } else if (canCloseRound) {
-          bannerEl.textContent = `★ GILIRAN ANDA! BISA TUTUP KARTU! KLIK \'TUTUP KARTU (T)\' (Buang ${closeCardId})! ★`;
+          bannerEl.innerHTML = `⚡ 🏆 <b>GILIRAN ANDA! BISA TUTUP KARTU!</b> — KLIK \'TUTUP KARTU (T)\' (Buang ${closeCardId})! 🏆 ⚡`;
         } else {
-          bannerEl.textContent = "★ GILIRAN ANDA! [TAHAP 2: SUSUN / BUANG] -> Klik \'AUTO TURUN (A)\', \'TURUNKAN (M)\', atau \'BUANG (B)\' ★";
+          bannerEl.innerHTML = "⚡ 🏁 <b>GILIRAN ANDA! [TAHAP 2: SUSUN & BUANG]</b> — Klik \'AUTO TURUN (A)\', \'TURUNKAN (M)\', atau \'BUANG (B)\' 🏁 ⚡";
         }
       }
     } else {
@@ -3281,6 +3727,7 @@ function updateUI(st) {
         const buriedCards = discards.slice(0, startIdx);
         let buriedHtml = buriedCards.map((c, bi) => {
           return renderCardHTML(c, {
+            small: true,
             locked: true,
             hint: `Kartu buangan lama #${bi + 1} (${c.rank}${c.suit}) — Terkubur di bawah 7 kartu aktif`
           }).replace('class="card', 'class="card buried-grey');
@@ -3411,15 +3858,17 @@ function updateUI(st) {
       if (isMyTurn) {
         stepBadge.style.display = 'inline-block';
         if (st.phase === 'TURN_DRAW') {
-          stepBadge.style.background = 'linear-gradient(90deg, #2563eb, #1d4ed8)';
+          stepBadge.style.background = 'linear-gradient(90deg, #2563eb, #0284c7)';
           stepBadge.style.color = '#fff';
-          stepBadge.style.boxShadow = '0 0 12px rgba(37,99,235,0.7)';
-          stepBadge.textContent = '👉 TAHAP 1: AMBIL KARTU (PAK / BUANGAN)';
+          stepBadge.style.border = '1.2px solid #93c5fd';
+          stepBadge.style.boxShadow = '0 0 14px rgba(56,189,248,0.85)';
+          stepBadge.textContent = '⚡ TAHAP 1: AMBIL KARTU (PAK / BUANGAN) ⚡';
         } else {
-          stepBadge.style.background = 'linear-gradient(90deg, #ea580c, #c2410c)';
+          stepBadge.style.background = 'linear-gradient(90deg, #ea580c, #dc2626)';
           stepBadge.style.color = '#fff';
-          stepBadge.style.boxShadow = '0 0 12px rgba(234,88,12,0.7)';
-          stepBadge.textContent = '👉 TAHAP 2: SUSUN & BUANG 1 KARTU';
+          stepBadge.style.border = '1.2px solid #fde047';
+          stepBadge.style.boxShadow = '0 0 14px rgba(249,115,22,0.85)';
+          stepBadge.textContent = '🎯 TAHAP 2: SUSUN & BUANG 1 KARTU 🎯';
         }
       } else {
         stepBadge.style.display = 'none';
@@ -4961,6 +5410,38 @@ class RemiWebHandler(BaseHTTPRequestHandler):
                         target_p.player_id = ""
                         GAME.status_message = f"Kursi {seat_idx + 1} dibuka untuk teman/pemain lain."
                 self._send_json({"success": True, "state": _format_state_dict(None)})
+                return
+            elif action == "DEV_SET_SCENARIO":
+                from remi_engine import Card
+                if GAME.phase == "LOBBY" or GAME.round_number == 0:
+                    GAME.start_new_round()
+                p0 = GAME.players[0]
+                p0.is_bot = False
+                p0.player_id = ""
+                p0.name = "Pembalap #95"
+                p0.hand = [
+                    Card('AS', 'A', 'S'),
+                    Card('KH', 'K', 'H'),
+                    Card('QD', 'Q', 'D'),
+                    Card('JC', 'J', 'C'),
+                    Card('JOKER_1', 'JOKER', 'J'),
+                    Card('10S', '10', 'S'),
+                    Card('8D', '8', 'D'),
+                ]
+                GAME.discard_pile = [
+                    Card('4S', '4', 'S'),
+                    Card('AC', 'A', 'C'),
+                    Card('6H', '6', 'H'),
+                    Card('3D', '3', 'D'),
+                    Card('6S', '6', 'S'),
+                    Card('KH_2', 'K', 'H'),
+                    Card('7H', '7', 'H'),
+                    Card('5H', '5', 'H'),
+                    Card('JS', 'J', 'S'),
+                ]
+                GAME.current_turn_seat = 0
+                GAME.phase = "TURN_DRAW"
+                self._send_json({"success": True, "state": _format_state_dict(0)})
                 return
             elif action == "CONFIGURE_AND_START":
                 GAME.configure_match(
