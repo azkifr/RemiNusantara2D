@@ -140,20 +140,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
     flex-direction: column;
   }
 
-  /* MEJA PERMAINAN ROYALE - 2 ATAS 2 BAWAH ARCHITECTURE */
+  /* MEJA PERMAINAN ROYALE - 2 ATAS 2 BAWAH ARCHITECTURE (OPTIMAL SPACE DISTRIBUTION) */
   #table {
     flex: 1;
     margin: 2px 6px;
     border: 7px solid var(--wood-rail);
     border-radius: 20px;
-    box-shadow: inset 0 0 60px rgba(0,0,0,0.88), 0 10px 30px rgba(0,0,0,0.92);
-    outline: 1.5px solid rgba(250, 204, 21, 0.25);
+    box-shadow: inset 0 0 70px rgba(0,0,0,0.92), 0 10px 30px rgba(0,0,0,0.95);
+    outline: 1.5px solid rgba(250, 204, 21, 0.3);
     outline-offset: -4px;
-    background: radial-gradient(ellipse at 50% 50%, var(--felt-center) 0%, var(--felt-mid) 54%, var(--felt-dark) 100%);
+    background: radial-gradient(ellipse at 50% 46%, var(--felt-center) 0%, var(--felt-mid) 50%, var(--felt-dark) 100%);
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    gap: 6px;
+    gap: 8px;
     padding: 6px 14px 6px 14px;
     position: relative;
     height: calc(100vh - 8px);
@@ -284,8 +284,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     grid-template-columns: 1fr 1fr;
     gap: 12px;
     width: 100%;
-    flex-shrink: 0;
-    height: clamp(72px, 12vh, 88px);
+    flex: 0 0 clamp(76px, 13vh, 94px);
     box-sizing: border-box;
   }
 
@@ -340,6 +339,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
     align-items: center;
     justify-content: flex-end;
     gap: 4px;
+    background: transparent;
+    border: none;
+    padding: 0;
   }
 
   /* CENTER ARENA: FULL-WIDTH ROYALE FELT (100% WIDE DISCARD RAIL) */
@@ -350,9 +352,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
     gap: 14px;
     padding: 2px 0;
     width: 100%;
-    flex: 1;
-    min-height: clamp(140px, 24vh, 185px);
-    max-height: 205px;
+    flex: 1 1 auto;
+    min-height: clamp(145px, 26vh, 200px);
+    max-height: 220px;
     box-sizing: border-box;
   }
 
@@ -363,8 +365,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     gap: 12px;
     width: 100%;
     align-items: stretch;
-    flex-shrink: 0;
-    height: clamp(175px, 28vh, 230px);
+    flex: 0 0 clamp(185px, 31vh, 245px);
     box-sizing: border-box;
   }
   .opp-pod-bottom {
@@ -462,7 +463,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     padding: 2px;
   }
   .opp-cards .card-back + .card-back {
-    margin-left: -18px;
+    margin-left: -20px;
   }
 
   /* ======================================================== */
@@ -475,17 +476,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
     justify-content: center;
     align-items: center;
     width: 100%;
-    min-height: 28px;
-    padding: 4px 6px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.08);
+    min-height: 22px;
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
   }
   .meld-empty-hint {
-    font-size: 10px;
-    color: rgba(255,255,255,0.4);
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.35);
     font-style: italic;
-    padding: 2px 4px;
+    padding: 2px 6px;
     text-align: center;
   }
   .meld-group {
@@ -500,8 +500,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* CARD BACK */
   .card-back {
-    width: 34px;
-    height: 48px;
+    width: 38px;
+    height: 52px;
     background: radial-gradient(circle at center, #991b1b 0%, #580c0c 100%);
     border: 1.5px solid #fbbf24;
     border-radius: 5px;
@@ -582,13 +582,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* STATIC DISCARD RAIL & BURIED TRAY (7 STATIC SLOTS)      */
   /* ======================================================== */
   #discard-rail {
-    background: rgba(3, 24, 14, 0.92);
+    background: linear-gradient(135deg, rgba(3, 24, 14, 0.94) 0%, rgba(2, 16, 9, 0.98) 100%);
+    backdrop-filter: blur(14px);
     border: 2px solid rgba(250, 204, 21, 0.45);
     border-radius: 14px;
-    padding: 5px 10px 6px 10px;
+    padding: 6px 12px 6px 12px;
     flex: 1;
     min-width: 0;
-    max-width: 860px;
+    max-width: none;
     height: clamp(140px, 24vh, 185px);
     display: flex;
     flex-direction: column;
@@ -698,28 +699,28 @@ HTML_PAGE = r"""<!DOCTYPE html>
   #disc-cards {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     justify-content: center;
     width: 100%;
     flex: 1;
-    padding: 2px 2px;
+    padding: 2px 0;
     position: relative;
-    overflow: hidden; /* Static 7-slot container - no scrolling needed */
+    overflow: hidden;
   }
   .disc-slot-placeholder {
     width: 100%;
-    max-width: 90px;
-    height: clamp(98px, 7.8vw, 126px);
-    border: 1.5px dashed rgba(250, 204, 21, 0.25);
+    max-width: none;
+    height: clamp(86px, 14vh, 118px);
+    border: 1.5px dashed rgba(250, 204, 21, 0.3);
     border-radius: 10px;
-    background: rgba(0, 0, 0, 0.24);
+    background: rgba(0, 0, 0, 0.28);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    color: rgba(250, 204, 21, 0.4);
+    gap: 2px;
+    color: rgba(250, 204, 21, 0.45);
     user-select: none;
     pointer-events: none;
     transition: all 0.15s ease;
@@ -743,9 +744,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
   /* ACTIVE DISCARD CARDS IN STATIC SLOTS (EXPANDED FOR FULL-WIDTH CENTER) */
   #disc-cards .card {
     width: 100%;
-    max-width: 90px;
-    min-width: 50px;
-    height: clamp(98px, 7.8vw, 126px);
+    max-width: none;
+    min-width: 48px;
+    height: clamp(86px, 14vh, 118px);
     flex-shrink: 0;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     position: relative;
@@ -940,16 +941,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    padding: 22px 10px 2px 10px;
+    padding: 20px 10px 2px 10px;
     width: 100%;
-    height: clamp(125px, 20vh, 160px);
+    height: clamp(130px, 22vh, 170px);
     position: relative;
     box-sizing: border-box;
   }
   #my-hand .hand-card-slot {
     width: var(--hand-card-w);
     height: var(--hand-card-h);
-    margin-left: calc(var(--hand-card-w) * -0.52); /* 50% menumpuk */
+    margin-left: calc(var(--hand-card-w) * -0.46); /* Kipas lebih lebar & elegan */
     position: relative;
     flex-shrink: 0;
     cursor: grab;
@@ -1116,8 +1117,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   /* ACTION DOCK (ALWAYS 100% VISIBLE AT BOTTOM!) */
   #action-bar {
-    grid-column: 1 / 4;
-    grid-row: 5 / 6;
     display: flex;
     justify-content: center;
     align-items: center;
